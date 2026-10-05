@@ -64,8 +64,10 @@ with "Property 'resolve' does not exist".
 single name: an `AnyToken`, or a `Token<never, ...>` produced by a cast.
 
 **Fix:** pass the Token you created with `token()`, typed as it was created.
-If a helper takes "some Token", make it generic over the Token
-(`<K extends AnyToken>(t: K)`) so the caller's exact type reaches `resolve`.
+If a helper takes "some Token", resolve at the call site and pass the value
+to the helper. A helper that is generic over the Token cannot call `resolve`
+without a cast, because a Container's type is exact (see the limit on generic
+functions in the [guide](guide/tokens-and-providers.md)).
 
 ### `resolve one Token at a time`
 
