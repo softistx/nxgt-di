@@ -1,0 +1,15 @@
+{
+	// An application's compiler options, not the library's: decorators on,
+	// metadata emitted, and none of the strictness the packages hold
+	// themselves to. The type tests must hold under both, because a consumer
+	// is on this side of the line.
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"noImplicitAny": false,
+		"exactOptionalPropertyTypes": false
+	},
+	"include": ["../../packages/*/test/types"]
+}
