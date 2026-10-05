@@ -1,2 +1,23 @@
-/** The version of the package's public surface; replaced by the real exports in the next slice. */
-export const version = '0.0.0';
+export { container } from './container/container';
+export type {
+	Container,
+	Factory,
+	Lifetime,
+	NoTokens,
+	ProvideOptions,
+	Resolver,
+} from './container/types';
+export {
+	ContainerDisposedError,
+	DiError,
+	type DiErrorCode,
+	DisposeError,
+	DuplicateTokenNameError,
+	TokenNotProvidedError,
+} from './errors/errors';
+export {
+	type AnyToken,
+	type Token,
+	type TokenValue,
+	token,
+} from './token/token';

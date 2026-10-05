@@ -1,0 +1,114 @@
+# Tokens and Providers
+
+## Tokens
+
+A **Token** stands for one dependency. You give it its value type and a name:
+
+```ts
+import { token } from '@nxgt/di';
+
+export const Config = token<{ url: string }>()('config');
+export const Db = token<Database>()('db');
+```
+
+The call is curried (`token<T>()(name)`) because TypeScript cannot infer the
+name while you spell out `T`. The name is a literal type. It is the Token's
+key in the Container's type, and it appears in error messages. At runtime,
+each Token's identity is a unique Symbol, so calling `token<Database>()('db')`
+twice gives two different Tokens. Create each Token once and import it.
+
+The name must be exactly one string literal. A name widened to `string`, a
+template pattern such as `` `db-${string}` ``, or a union such as
+`'primary' | 'replica'` would key many entries with one Token, so `token()`
+and `provide` both refuse it. Likewise, `resolve` and `get` take one Token at
+a time, never a union of Tokens.
+
+To accept any Token in a helper of your own, type the parameter as `AnyToken`.
+`TokenValue<K>` reads a Token's value type back:
+
+```ts
+import type { AnyToken, TokenValue } from '@nxgt/di';
+
+function describe<K extends AnyToken>(t: K): string {
+  return `Token '${t.name}'`;
+}
+type Db = TokenValue<typeof Db>; // Database
+```
+
+## Providers
+
+`provide(token, factory, options?)` tells the Container how to make a Token's
+value. The factory receives `{ get }`, and it may be sync or async:
+
+```ts
+import { container } from '@nxgt/di';
+
+const app = container()
+  .provide(Config, () => ({ url: process.env.MONGO_URI ?? '' }))
+  .provide(Db, async ({ get }) => Database.connect((await get(Config)).url));
+```
+
+- **Order is imposed.** A factory sees only the Tokens provided above it, so a
+  missing dependency fails to compile and a cycle cannot be written.
+- **`get` and `resolve` always return a Promise**, even when the factory is
+  sync. A factory that later becomes async breaks no caller.
+- **Every `provide` returns a new Container.** It does not change the
+  previous one.
+- **A Container's type is exact.** `Container<{ db: Db }>` accepts only a
+  Container that provides exactly `db`, as a `Db`. A function generic over
+  what is provided, such as
+  `<P extends { db: Db }>(app: Container<P>) => app.resolve(Db)`, does not
+  compile, because a Container is invariant in that type. Take the concrete
+  Container type (`typeof app`) instead. Modules, which are coming, are the
+  way to write code that needs only some of a Container's Tokens.
+
+## Lifetimes
+
+| `lifetime` | what you get |
+| --- | --- |
+| `'singleton'` (default) | one value per Container, made on first resolve |
+| `'transient'` | a new value on every resolve |
+
+```ts
+.provide(RequestId, () => crypto.randomUUID(), { lifetime: 'transient' })
+```
+
+Two concurrent resolves of a singleton share one creation. If the factory
+throws, nothing is cached, and the next resolve tries again.
+
+## Disposal
+
+A Container is `AsyncDisposable`. Disposing of it disposes of every value it
+created, transients included, in reverse creation order:
+
+```ts
+await using app = container()
+  .provide(Db, async () => Database.connect(url), { dispose: (db) => db.close() });
+// leaving the block closes db
+```
+
+- When a Provider gives no `dispose`, the Container calls the value's own
+  `Symbol.asyncDispose`, and failing that its `Symbol.dispose`.
+- Disposing twice does nothing. Resolving after disposal rejects with
+  `ContainerDisposedError`.
+- When several `dispose` functions throw, the rest still run, and you get one
+  `DisposeError` that holds every failure. See
+  [troubleshooting](../troubleshooting.md).
+- A transient is disposed once per resolve. A transient factory that returns
+  the same object every time gets that object disposed as many times as it
+  was resolved; make such a value a singleton instead.
+- Disposal first waits for the factories still running, so that what they
+  make is disposed too, and the resolves waiting on them reject with
+  `ContainerDisposedError`. This wait has no time limit, as `await using`
+  has none: a factory that never settles keeps disposal waiting for ever.
+  That is deliberate. Bound it yourself where you stop the application,
+  either with your framework's stop timeout or with a race against a timer:
+
+  ```ts
+  await Promise.race([
+    app[Symbol.asyncDispose](),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('disposal timed out')), 10_000),
+    ),
+  ]);
+  ```
