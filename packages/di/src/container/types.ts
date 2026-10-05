@@ -1,4 +1,4 @@
-import type { IsUnion, LiteralName } from '../token/name';
+import type { IsLiteralName, IsUnion, LiteralName } from '../token/name';
 import type { AnyToken, Token, TokenValue } from '../token/token';
 
 /**
@@ -23,15 +23,18 @@ export interface Resolver<Provided> {
 /**
  * Refuses a Token that `Provided` lacks, or has under the same name with
  * another value type, and a union of Tokens, which would resolve to a union
- * of values with no way to tell which. The refusal is a property named after
+ * of values with no way to tell which, and anything that is not a Token with
+ * one name (`AnyToken`, a `never` name). The refusal is a property named after
  * the problem, so the compiler's message says what is wrong.
  */
 export type Resolvable<K, Provided> =
 	IsUnion<K> extends true
 		? { readonly 'resolve one Token at a time': never }
 		: K extends Token<infer N, infer T>
-			? LiteralName<N> & ProvidedAs<N, T, Provided>
-			: never;
+			? [N] extends [never]
+				? { readonly 'not a resolvable Token': never }
+				: LiteralName<N> & ProvidedAs<N, T, Provided>
+			: { readonly 'not a resolvable Token': never };
 
 type ProvidedAs<N extends string, T, Provided> = N extends keyof Provided
 	? // Both ways, since a Token's value type is invariant.
@@ -61,16 +64,15 @@ export interface ProvideOptions<T> {
 /**
  * Refuses a name that is not exactly one string literal (a widened `string`
  * or a pattern would key every name at once), and a name `Provided` already
- * has. Not distributive: a union holding one taken name is refused whole.
+ * has.
  */
-export type Unprovided<N extends string, Provided> =
-	LiteralName<N> extends infer Refusal
-		? unknown extends Refusal
-			? [Extract<N, keyof Provided>] extends [never]
-				? unknown
-				: { readonly [K in `Token name '${N}' is already provided`]: never }
-			: Refusal
-		: never;
+export type Unprovided<N extends string, Provided> = LiteralName<N> &
+	// Distributes, which is harmless: LiteralName already refuses a union.
+	// Kept distributive on purpose: the non-distributive form made every
+	// Container<P> assignable to every Container<Q>.
+	(N extends keyof Provided
+		? { readonly [K in `Token name '${N}' is already provided`]: never }
+		: unknown);
 
 /**
  * The Providers an application has declared. Its type lists every Token it
@@ -91,9 +93,13 @@ export interface Container<Provided = NoTokens> extends AsyncDisposable {
 		options?: ProvideOptions<NoInfer<T>>,
 		// Written out rather than behind an alias, so a hover shows one flat
 		// object, `Container<{ db: Db; users: Users }>`, not nested aliases.
-	): Container<{
-		[K in keyof Provided | N]: K extends keyof Provided ? Provided[K] : T;
-	}>;
+		// A name that is not one literal (an `any` Token gets this far) yields
+		// a refusal instead, so the next call fails rather than resolving all.
+	): IsLiteralName<N> extends true
+		? Container<{
+				[K in keyof Provided | N]: K extends keyof Provided ? Provided[K] : T;
+			}>
+		: { readonly 'a Token name must be exactly one string literal': never };
 
 	/**
 	 * Disposes of every value this Container created, in reverse creation

@@ -1,4 +1,10 @@
-import { type Container, container, token } from '../../src/index';
+import {
+	type AnyToken,
+	type Container,
+	container,
+	type Token,
+	token,
+} from '../../src/index';
 import type { Equal, Expect } from './assert';
 import type { Db, Users } from './fixtures';
 
@@ -68,6 +74,16 @@ container()
 // With a provided name, the refusal is the value type instead.
 // @ts-expect-error 'db' is provided with another value type
 app.resolve(token<never>()('db'));
+
+// Something that is not a Token with one name is refused, and says so.
+declare const unnamed: Token<never, Db>;
+declare const someToken: AnyToken;
+// @ts-expect-error not a resolvable Token
+app.resolve(unnamed);
+// @ts-expect-error not a resolvable Token
+app.resolve(someToken);
+// probe: the Token itself compiles.
+app.resolve(Database);
 
 // `resolve` is bound: it may be taken off the Container.
 const { resolve } = app;

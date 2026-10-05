@@ -42,6 +42,13 @@ const app = container()
   sync. A factory that later becomes async breaks no caller.
 - **Every `provide` returns a new Container.** It does not change the
   previous one.
+- **A Container's type is exact.** `Container<{ db: Db }>` accepts only a
+  Container that provides exactly `db`, as a `Db`. A function generic over
+  what is provided, such as
+  `<P extends { db: Db }>(app: Container<P>) => app.resolve(Db)`, does not
+  compile, because a Container is invariant in that type. Take the concrete
+  Container type (`typeof app`) instead. Modules, which are coming, are the
+  way to write code that needs only some of a Container's Tokens.
 
 ## Lifetimes
 

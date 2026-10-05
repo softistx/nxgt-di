@@ -51,8 +51,21 @@ those.
 or a pattern would key every name at once, after which any Token would
 resolve; a union would key two entries with one Token.
 
+When a Token typed `any` reaches `provide`, the call itself compiles, but it
+returns this refusal instead of a Container, so the next call on it fails
+with "Property 'resolve' does not exist".
+
 **Fix:** pass one literal (`token<Db>()('db')`), or declare the variable
 `as const`. For a choice between two dependencies, create two Tokens.
+
+### `not a resolvable Token`
+
+**When:** you passed `resolve` or `get` something typed as a Token but with no
+single name: an `AnyToken`, or a `Token<never, ...>` produced by a cast.
+
+**Fix:** pass the Token you created with `token()`, typed as it was created.
+If a helper takes "some Token", make it generic over the Token
+(`<K extends AnyToken>(t: K)`) so the caller's exact type reaches `resolve`.
 
 ### `resolve one Token at a time`
 
