@@ -36,7 +36,8 @@ await app[Symbol.asyncDispose](); // or `await using app = ...`
 ```
 
 A Token's name is its key in the Container's type: a second Token with a name
-already provided fails to compile. `lifetime: 'transient'` makes a new value on
+already provided fails to compile (and, past a cast, throws
+`DI_DUPLICATE_TOKEN_NAME`). `lifetime: 'transient'` makes a new value on
 every resolve; the Container still owns it and disposes of it, in reverse
 creation order with everything else. Errors carry a stable `code`
 (`DI_TOKEN_NOT_PROVIDED`, `DI_DUPLICATE_TOKEN_NAME`, `DI_CONTAINER_DISPOSED`,
