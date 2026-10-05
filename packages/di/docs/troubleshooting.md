@@ -40,12 +40,30 @@ everywhere.
 **Fix:** a Token's name is its key in the Container's type, so give each Token
 its own name.
 
-### `a Token name must be a string literal`
+### `a Token name must be exactly one string literal`
 
-**When:** you passed `token()` a name that is a variable widened to `string`.
+**When:** you passed `token()` a name that is a variable widened to `string`,
+a template pattern such as `` `db-${string}` ``, or a union such as
+`'primary' | 'replica'`; or you passed `provide` a Token whose name is one of
+those.
 
-**Fix:** pass a literal (`token<Db>()('db')`), or declare the variable
-`as const`.
+**Why:** the name is the Token's key in the Container's type. A widened name
+or a pattern would key every name at once, after which any Token would
+resolve; a union would key two entries with one Token.
+
+**Fix:** pass one literal (`token<Db>()('db')`), or declare the variable
+`as const`. For a choice between two dependencies, create two Tokens.
+
+### `resolve one Token at a time`
+
+**When:** you passed `resolve` or `get` a value typed as a union of Tokens,
+such as `primary ? Db : Replica`.
+
+**Why:** the result would be a union of values with no way to tell which, and
+a Token the Container lacks could hide beside one it has.
+
+**Fix:** branch around the call instead:
+`primary ? app.resolve(Db) : app.resolve(Replica)`.
 
 ## Runtime errors
 
@@ -100,4 +118,27 @@ try {
 } catch (error) {
   if (error instanceof DisposeError) log.error({ tokens: error.tokens, causes: error.errors });
 }
+```
+
+## Disposal never finishes
+
+**When:** `await app[Symbol.asyncDispose]()` (or leaving an `await using`
+block) hangs.
+
+**Why:** disposal waits for every factory still running, so that what it
+makes is disposed too. A factory that never settles, such as a connection
+attempt with no timeout, keeps it waiting. This is deliberate, and it matches
+`await using`, which has no time limit either.
+
+**Fix:** give the factory's own I/O a timeout, and bound the shutdown where
+you stop the application, with your framework's stop timeout or a race
+against a timer:
+
+```ts
+await Promise.race([
+  app[Symbol.asyncDispose](),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('disposal timed out')), 10_000),
+  ),
+]);
 ```

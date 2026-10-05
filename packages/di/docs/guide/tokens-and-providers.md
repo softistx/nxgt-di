@@ -17,6 +17,12 @@ key in the Container's type, and it appears in error messages. At runtime,
 each Token's identity is a unique Symbol, so calling `token<Database>()('db')`
 twice gives two different Tokens. Create each Token once and import it.
 
+The name must be exactly one string literal. A name widened to `string`, a
+template pattern such as `` `db-${string}` ``, or a union such as
+`'primary' | 'replica'` would key many entries with one Token, so `token()`
+and `provide` both refuse it. Likewise, `resolve` and `get` take one Token at
+a time, never a union of Tokens.
+
 ## Providers
 
 `provide(token, factory, options?)` tells the Container how to make a Token's
@@ -69,3 +75,21 @@ await using app = container()
 - When several `dispose` functions throw, the rest still run, and you get one
   `DisposeError` that holds every failure. See
   [troubleshooting](../troubleshooting.md).
+- A transient is disposed once per resolve. A transient factory that returns
+  the same object every time gets that object disposed as many times as it
+  was resolved; make such a value a singleton instead.
+- Disposal first waits for the factories still running, so that what they
+  make is disposed too, and the resolves waiting on them reject with
+  `ContainerDisposedError`. This wait has no time limit, as `await using`
+  has none: a factory that never settles keeps disposal waiting for ever.
+  That is deliberate. Bound it yourself where you stop the application,
+  either with your framework's stop timeout or with a race against a timer:
+
+  ```ts
+  await Promise.race([
+    app[Symbol.asyncDispose](),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('disposal timed out')), 10_000),
+    ),
+  ]);
+  ```

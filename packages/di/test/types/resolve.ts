@@ -47,6 +47,34 @@ app.resolve(WrongDatabase);
 // runtime still refuses it, since identity is the Symbol.
 app.resolve(token<Db>()('db'));
 
+// A union of Tokens is refused: its value would be a union with no way to
+// tell which, and a missing member would slip through beside a provided one.
+declare const either: boolean;
+// @ts-expect-error resolve one Token at a time
+app.resolve(either ? Database : Cache);
+// probe: each Token on its own compiles, provided.
+export const one = either ? app.resolve(Database) : app.resolve(UserRepo);
+
+// A Token of `never` is reported like any other: not provided...
+const Nothing = token<never>()('nothing');
+// @ts-expect-error 'nothing' is not provided
+app.resolve(Nothing);
+// probe: ...and once provided (a factory that always throws), it resolves.
+container()
+	.provide(Nothing, () => {
+		throw new Error('never made');
+	})
+	.resolve(Nothing);
+// With a provided name, the refusal is the value type instead.
+// @ts-expect-error 'db' is provided with another value type
+app.resolve(token<never>()('db'));
+
+// `resolve` is bound: it may be taken off the Container.
+const { resolve } = app;
+export type Bound = Expect<
+	Equal<ReturnType<typeof resolve<typeof Database>>, Promise<Db>>
+>;
+
 // A Container is AsyncDisposable, so `await using` takes it.
 export const disposable: AsyncDisposable = app;
 // @ts-expect-error it is not synchronously Disposable

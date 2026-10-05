@@ -23,10 +23,9 @@ export function resolveToken(state: State, token: AnyToken): Promise<unknown> {
 	if (cached) return cached;
 	const created = create(state, provider);
 	state.singletons.set(token.id, created);
-	created.catch(() => {
-		if (state.singletons.get(token.id) === created)
-			state.singletons.delete(token.id);
-	});
+	// Registered before any caller can await `created`, so the failed entry
+	// is gone before anyone could resolve again: nothing newer to protect.
+	created.catch(() => state.singletons.delete(token.id));
 	return created;
 }
 

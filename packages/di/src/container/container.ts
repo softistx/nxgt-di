@@ -16,11 +16,13 @@ class DiContainer {
 		this.#state = createState(providers);
 	}
 
-	provide(
+	// Arrow properties, not methods: `const { resolve } = app` keeps working.
+
+	readonly provide = (
 		token: AnyToken,
 		factory: Provider['factory'],
 		options: ProvideOptions<unknown> = {},
-	): DiContainer {
+	): DiContainer => {
 		const provider: Provider = {
 			token,
 			factory,
@@ -28,15 +30,13 @@ class DiContainer {
 			dispose: options.dispose,
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
-	}
+	};
 
-	resolve(token: AnyToken): Promise<unknown> {
-		return resolveToken(this.#state, token);
-	}
+	readonly resolve = (token: AnyToken): Promise<unknown> =>
+		resolveToken(this.#state, token);
 
-	[Symbol.asyncDispose](): Promise<void> {
-		return disposeOnce(this.#state);
-	}
+	readonly [Symbol.asyncDispose] = (): Promise<void> =>
+		disposeOnce(this.#state);
 }
 
 /**

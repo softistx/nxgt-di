@@ -1,3 +1,5 @@
+import type { LiteralName } from './name';
+
 /** Carries a Token's value type. Type-only: no Token has it at runtime. */
 declare const value: unique symbol;
 
@@ -18,16 +20,19 @@ export interface Token<Name extends string, T> {
 	readonly [value]: (value: T) => T;
 }
 
-/** A Token of any name and value, for code that does not care which. */
-export type AnyToken = Token<string, any>;
+/**
+ * A Token of any name and value, for code that does not care which. Its
+ * phantom is the top of `(value: T) => T`, so every Token is one, including a
+ * `Token<N, never>`, which `Token<string, any>` would refuse.
+ */
+export interface AnyToken {
+	readonly name: string;
+	readonly id: symbol;
+	readonly [value]: (value: never) => unknown;
+}
 
 /** The value type a Token stands for. */
 export type TokenValue<K> = K extends Token<string, infer T> ? T : never;
-
-/** Refuses a name widened to `string`: it could not key a Container's type. */
-type LiteralName<N extends string> = string extends N
-	? { readonly 'a Token name must be a string literal': never }
-	: unknown;
 
 /**
  * Creates a Token: `token<Db>()('db')`.

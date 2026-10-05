@@ -48,4 +48,16 @@ describe('container', () => {
 		}
 		expect(disposed).toEqual(['a']);
 	});
+
+	test('provide, resolve and dispose are bound, so they can be taken off', async () => {
+		const disposed: string[] = [];
+		const { provide } = container();
+		const app = provide(A, () => 'a', {
+			dispose: (value) => void disposed.push(value),
+		});
+		const { resolve, [Symbol.asyncDispose]: dispose } = app;
+		expect(await resolve(A)).toBe('a');
+		await dispose();
+		expect(disposed).toEqual(['a']);
+	});
 });

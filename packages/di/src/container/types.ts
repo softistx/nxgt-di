@@ -1,3 +1,4 @@
+import type { IsUnion, LiteralName } from '../token/name';
 import type { AnyToken, Token, TokenValue } from '../token/token';
 
 /**
@@ -21,20 +22,25 @@ export interface Resolver<Provided> {
 
 /**
  * Refuses a Token that `Provided` lacks, or has under the same name with
- * another value type. The refusal is a property named after the problem, so
- * the compiler's message says what is wrong.
+ * another value type, and a union of Tokens, which would resolve to a union
+ * of values with no way to tell which. The refusal is a property named after
+ * the problem, so the compiler's message says what is wrong.
  */
 export type Resolvable<K, Provided> =
-	K extends Token<infer N, infer T>
-		? N extends keyof Provided
-			? // Both ways, since a Token's value type is invariant.
-				[T, Provided[N]] extends [Provided[N], T]
-				? unknown
-				: {
-						readonly [M in `Token '${N}' is provided with another value type`]: never;
-					}
-			: { readonly [M in `Token '${N}' is not provided`]: never }
-		: never;
+	IsUnion<K> extends true
+		? { readonly 'resolve one Token at a time': never }
+		: K extends Token<infer N, infer T>
+			? LiteralName<N> & ProvidedAs<N, T, Provided>
+			: never;
+
+type ProvidedAs<N extends string, T, Provided> = N extends keyof Provided
+	? // Both ways, since a Token's value type is invariant.
+		[T, Provided[N]] extends [Provided[N], T]
+		? unknown
+		: {
+				readonly [M in `Token '${N}' is provided with another value type`]: never;
+			}
+	: { readonly [M in `Token '${N}' is not provided`]: never };
 
 /** How a Provider makes its value. It may be sync or async. */
 export type Factory<Provided, T> = (
@@ -52,10 +58,19 @@ export interface ProvideOptions<T> {
 	readonly dispose?: ((value: T) => void | PromiseLike<void>) | undefined;
 }
 
-/** Refuses a Token whose name `Provided` already has. */
-export type Unprovided<N extends string, Provided> = N extends keyof Provided
-	? { readonly [K in `Token name '${N}' is already provided`]: never }
-	: unknown;
+/**
+ * Refuses a name that is not exactly one string literal (a widened `string`
+ * or a pattern would key every name at once), and a name `Provided` already
+ * has. Not distributive: a union holding one taken name is refused whole.
+ */
+export type Unprovided<N extends string, Provided> =
+	LiteralName<N> extends infer Refusal
+		? unknown extends Refusal
+			? [Extract<N, keyof Provided>] extends [never]
+				? unknown
+				: { readonly [K in `Token name '${N}' is already provided`]: never }
+			: Refusal
+		: never;
 
 /**
  * The Providers an application has declared. Its type lists every Token it

@@ -75,4 +75,23 @@ describe('resolve', () => {
 		expect(a).toBe(b);
 		expect(made).toBe(1);
 	});
+
+	test('concurrent resolves of a failing singleton share one run and one rejection', async () => {
+		let calls = 0;
+		const app = container().provide(Config, async () => {
+			calls++;
+			await Promise.resolve();
+			if (calls === 1) throw new Error('down');
+			return { url: 'x' };
+		});
+		const [a, b] = await Promise.all([
+			app.resolve(Config).catch((e) => e),
+			app.resolve(Config).catch((e) => e),
+		]);
+		expect(calls).toBe(1);
+		expect(a).toBeInstanceOf(Error);
+		expect(b).toBe(a);
+		expect(await app.resolve(Config)).toEqual({ url: 'x' });
+		expect(calls).toBe(2);
+	});
 });

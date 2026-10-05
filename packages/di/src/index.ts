@@ -15,4 +15,9 @@ export {
 	DuplicateTokenNameError,
 	TokenNotProvidedError,
 } from './errors/errors';
-export { type Token, type TokenValue, token } from './token/token';
+export {
+	type AnyToken,
+	type Token,
+	type TokenValue,
+	token,
+} from './token/token';

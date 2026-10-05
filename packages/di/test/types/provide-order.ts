@@ -1,4 +1,4 @@
-import { container, token } from '../../src/index';
+import { container, type Token, token } from '../../src/index';
 import type { Config, Db, Users } from './fixtures';
 
 const Settings = token<Config>()('config');
@@ -64,6 +64,29 @@ container()
 	.provide(Database, () => db)
 	.provide(ReplicaDatabase, () => db);
 
+// A union of names holding a taken one is refused whole, not member by member.
+declare const Either: Token<'db' | 'replica', Db>;
+container()
+	.provide(Database, () => db)
+	// @ts-expect-error a Token name must be exactly one string literal
+	.provide(Either, () => db);
+// probe: the replica alone, a free name, compiles.
+container()
+	.provide(Database, () => db)
+	.provide(ReplicaDatabase, () => db);
+
+// A Token whose name is widened to `string`, or a pattern, would key every
+// name at once, and resolve anything after. It is refused.
+declare const wide: Token<string, Db>;
+declare const pattern: Token<`db-${string}`, Db>;
+// @ts-expect-error a Token name must be exactly one string literal
+container().provide(wide, () => db);
+// @ts-expect-error a Token name must be exactly one string literal
+container().provide(pattern, () => db);
+// probe: a Token whose name is one literal compiles.
+declare const narrow: Token<'db-main', Db>;
+container().provide(narrow, () => db);
+
 // A factory must return the Token's value type, sync or async.
 container()
 	// @ts-expect-error a Config is not a Db
@@ -89,3 +112,11 @@ container().provide(Database, () => db, {
 		await value.query('select 1');
 	},
 });
+
+// `scoped` arrives with Scopes; until then a Provider is refused it.
+container().provide(Database, () => db, {
+	// @ts-expect-error 'scoped' is not a Lifetime yet
+	lifetime: 'scoped',
+});
+// probe: 'transient' is.
+container().provide(Database, () => db, { lifetime: 'transient' });
