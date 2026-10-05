@@ -5,7 +5,7 @@ shipped in is the only number on this page.
 
 ## Now
 
-- **@nxgt/di** — wire an application's services with typed Tokens, and a missing or captive dependency fails to compile. In progress: the package holds no API yet.
+- **@nxgt/di** — wire an application's services with typed Tokens, and a missing or captive dependency fails to compile. In progress: Tokens, singleton and transient Providers, and disposal are in; Scopes, Slots, the captive check, overrides and Modules are next.
 
 ## Next
 
