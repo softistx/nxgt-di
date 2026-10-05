@@ -23,6 +23,18 @@ template pattern such as `` `db-${string}` ``, or a union such as
 and `provide` both refuse it. Likewise, `resolve` and `get` take one Token at
 a time, never a union of Tokens.
 
+To accept any Token in a helper of your own, type the parameter as `AnyToken`.
+`TokenValue<K>` reads a Token's value type back:
+
+```ts
+import type { AnyToken, TokenValue } from '@nxgt/di';
+
+function describe<K extends AnyToken>(t: K): string {
+  return `Token '${t.name}'`;
+}
+type Db = TokenValue<typeof Db>; // Database
+```
+
 ## Providers
 
 `provide(token, factory, options?)` tells the Container how to make a Token's
