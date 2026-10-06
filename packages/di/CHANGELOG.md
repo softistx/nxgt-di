@@ -1,5 +1,11 @@
 # @nxgt/di
 
+## 0.2.0
+
+### Minor Changes
+
+- [#6](https://github.com/softistx/nxgt-di/pull/6) [`82fbf8b`](https://github.com/softistx/nxgt-di/commit/82fbf8ba9d1dd7cd30018cdfba641b15e5ba929f) Thanks [@SteveGT96](https://github.com/SteveGT96)! - For integrations: `ScopeResolvable<K, Singletons, Scoped>` is exported, the check `Scope.resolve` applies to a Token, so an integration can check Tokens before any Scope exists. `DiErrorCode` gains `DI_SCOPE_NOT_MOUNTED`, the code of `@nxgt/di-hono`'s `ScopeNotMountedError`, which extends `DiError`. An exhaustive `switch` over `DiErrorCode` needs the new case.
+
 ## 0.1.0
 
 ### Minor Changes

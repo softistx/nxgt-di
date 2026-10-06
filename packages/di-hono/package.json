@@ -1,6 +1,6 @@
 {
 	"name": "@nxgt/di-hono",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "A Hono middleware for @nxgt/di: a lazy Scope per request, disposed when the request ends, and typed values on c.var",
 	"license": "MIT",
 	"type": "module",
