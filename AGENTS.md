@@ -122,7 +122,8 @@ CI runs the same, in this order, with no service container.
   one): `packages.ts` reads the workspace, `tarball.ts` a tarball's entries,
   `manifest.ts` its dependency fields, `registry.ts` asks npm, then `stale.ts`,
   `install.ts`, `load.ts`, `classes.ts`, `imports.ts` (which `declarations.ts`
-  serves), `types.ts` (with `resolve-types.ts`) and `emit.ts`.
+  serves), `types.ts` (with `resolve-types.ts`), `load.ts` again for the bins,
+  and `emit.ts`.
   - `manifest.ts` rejects a `link:`, `file:` or `workspace:` a consumer cannot
     resolve, a required peer on no registry, an exact pin on a sibling, a
     package listing itself, a licence other than MIT or no `LICENSE`, a `files`
