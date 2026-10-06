@@ -11,7 +11,7 @@ consumers: no `@nxgt/*` library package depends on it.
 | package | what it is |
 | --- | --- |
 | `@nxgt/di` | the core: typed Tokens, a Container whose type grows with each `provide`, lifetimes, Scopes, Slots, disposal. **No dependency at all**, and no `reflect-metadata` |
-| `@nxgt/di-hono` | *(to come)* a Hono middleware: a lazy Scope per request, disposed in `finally` |
+| `@nxgt/di-hono` | a Hono middleware: a lazy Scope per request on `c.var.scope`, disposed in `finally`, and `expose` to put resolved values on `c.var`. `"private": true` until its first release |
 
 The vocabulary (Token, Provider, Container, Scope, Slot, Captive dependency...)
 is in [CONTEXT.md](./CONTEXT.md); use those words. The decisions are in
@@ -23,9 +23,12 @@ It is **Bun-first**: ESM, tested with `bun test`, no Bun-only API in the library
 
 ## Layering
 
-`@nxgt/di` depends on nothing. `@nxgt/di-hono` will depend on it as a peer, and
-on Hono as a peer. Never the other way round, and never a cycle. Siblings
-depend on each other by `workspace:^`.
+`@nxgt/di` depends on nothing. `@nxgt/di-hono` depends on it as a peer
+(`workspace:^`), and on Hono as a peer (`^4.8.0`, with `hono` pinned exactly
+as a devDependency, as nxgt-telemetry's `telemetry-hono` does). Never the other
+way round, and never a cycle: `@nxgt/di` names no integration, except that
+`DiErrorCode` lists each integration's codes (`DI_SCOPE_NOT_MOUNTED`) so their
+errors can extend `DiError`. Siblings depend on each other by `workspace:^`.
 
 `@alxia/di` is built in the alxia repository, not here.
 
@@ -56,6 +59,12 @@ green.
   in-flight promise.**
 - **`override` never mutates.** It returns a new Container, and the original
   resolves exactly as before.
+- **`@nxgt/di-hono`'s Scope is lazy and always disposed of.** A request that
+  resolves nothing creates no Scope and never calls `slots`; one that does has
+  its Scope disposed of after `next()`, whether the handler returned or threw,
+  and a disposal failure goes to `onDisposeError`, never into the response.
+  `expose` finds the Scope of its own `di` only (a `WeakMap` keyed by the
+  Context), never whatever is on `c.var.scope`.
 - **The type checker stays affordable.** `packages/di/test/types/stress.ts`
   (60 Providers mixing every lifetime, Slots and two Modules) must not hit
   TS2589. Its cost when slice 4 landed: 92,089 instantiations (`tsc
@@ -92,6 +101,10 @@ CI runs the same, in this order, with no service container.
   and so does `test/consumer`. Under `strictFunctionTypes: false` an annotation
   can claim a Token that is provided later. The captive refusal still holds, but
   provide order does not. Do not remove `strict` from the consumer config.
+- **`@nxgt/di-hono` runs against `@nxgt/di`'s `dist/`.** Its specs and type
+  tests import `@nxgt/di` through the workspace link, whose `exports` point at
+  `dist/`. After changing `packages/di/src`, run `bun run build` before testing
+  `di-hono`, or it tests the previous build.
 - **Imports carry no extension** (`'./token'`, never `'./token.js'`), and
   consumers resolve as a bundler does. A failure only under `nodenext` is not a
   bug.

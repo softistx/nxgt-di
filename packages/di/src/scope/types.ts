@@ -43,3 +43,16 @@ export type SlotValues<V, Slots> = V & {
 export type CreateScopeArgs<V, Slots> = [keyof Slots] extends [never]
 	? [slots?: SlotValues<V, Slots>]
 	: [slots: SlotValues<V, Slots>];
+
+/**
+ * `unknown` when a Scope of these maps resolves `K`, else a refusal whose
+ * property name says why, as `resolve` reports it. For an integration that
+ * checks Tokens before any Scope exists: `@nxgt/di-hono`'s `expose`
+ * intersects each Token with it.
+ */
+export type ScopeResolvable<K, Singletons, Scoped> = Resolvable<
+	K,
+	Singletons,
+	Scoped,
+	'scoped'
+>;

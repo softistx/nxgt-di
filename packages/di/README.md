@@ -200,10 +200,11 @@ await app.init(); // rejects with the first factory's error
 | `SlotOverrideError` | class | see Errors |
 | `ModuleEscapedError` | class | see Errors |
 | `DisposeError` | class | see Errors |
-| `DiErrorCode` | type | the union of every `code` |
+| `DiErrorCode` | type | the union of every `code`, `@nxgt/di-hono`'s `DI_SCOPE_NOT_MOUNTED` included |
 | `Container` | type | the Container, typed by its Singletons, Scoped and Slots maps |
 | `NoTokens` | type | the map of an empty Container |
 | `Scope` | type | what `createScope` returns |
+| `ScopeResolvable` | type | `unknown` when a Scope of given maps resolves a Token, else the refusal: for an integration that checks Tokens ahead of a Scope |
 | `Token` | type | a Token: its name and value type |
 | `AnyToken` | type | any Token, for a helper of your own |
 | `TokenValue` | type | reads a Token's value type back |

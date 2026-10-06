@@ -3,7 +3,11 @@
  * on the class, never on the message.
  */
 
-/** Every `code` an `@nxgt/di` error can carry. */
+/**
+ * Every `code` an `@nxgt/di` error can carry, and those of its integrations,
+ * whose errors extend `DiError` too: `DI_SCOPE_NOT_MOUNTED` is
+ * `@nxgt/di-hono`'s.
+ */
 export type DiErrorCode =
 	| 'DI_TOKEN_NOT_PROVIDED'
 	| 'DI_DUPLICATE_TOKEN_NAME'
@@ -13,7 +17,8 @@ export type DiErrorCode =
 	| 'DI_SLOT_MISSING'
 	| 'DI_SLOT_OVERRIDE'
 	| 'DI_MODULE_ESCAPED'
-	| 'DI_DISPOSE_FAILED';
+	| 'DI_DISPOSE_FAILED'
+	| 'DI_SCOPE_NOT_MOUNTED';
 
 /** The base of the errors that concern one Token. */
 export abstract class DiError extends Error {
