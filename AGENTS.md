@@ -114,6 +114,38 @@ CI runs the same, in this order, with no service container.
 - **The skeleton is nxgt-data's.** The shared root files are byte-for-byte
   copies; fix a drift in nxgt-data first. The `diff` loop is in the
   `nxgt-monorepo:lay-out-a-library-monorepo` skill.
+- **A build that exits 0 is not evidence the artifact loads.**
+  `bun run verify:artifacts` packs every package, installs the tarballs as a
+  consumer does, and runs these stages in order, stopping at the first that
+  fails (`scripts/verify-artifacts.ts` only sequences them; each lives in
+  `scripts/artifacts/`, one module per responsibility, a spec beside each pure
+  one): `packages.ts` reads the workspace, `tarball.ts` a tarball's entries,
+  `manifest.ts` its dependency fields, `registry.ts` asks npm, then `stale.ts`,
+  `install.ts`, `load.ts`, `classes.ts`, `imports.ts` (which `declarations.ts`
+  serves), `types.ts` (with `resolve-types.ts`), `load.ts` again for the bins,
+  and `emit.ts`.
+  - `manifest.ts` rejects a `link:`, `file:` or `workspace:` a consumer cannot
+    resolve, a required peer on no registry, an exact pin on a sibling, a
+    package listing itself, a licence other than MIT or no `LICENSE`, a `files`
+    entry the tarball holds nothing under, test code shipped, and a scoped
+    package without `publishConfig.access: "public"`. `siblings.ts` holds the
+    sibling-range rule: a sibling range must be exactly the one its
+    `workspace:` spec produces beside the sibling's version in the workspace,
+    which is what a stale `bun.lock` gets wrong. `@nxgt/di-hono`'s `workspace:^`
+    peer on `@nxgt/di` passes it with the current `bun.lock`.
+  - `imports.ts` fails a built import (the `.js` through Bun's scanner, the
+    `.d.ts` through `declarations.ts`) of a package the manifest does not
+    declare in `dependencies`, `peerDependencies` or `optionalDependencies`;
+    a sibling listed only as a devDependency loads in the install and fails
+    for a consumer. `types.ts` fails a declaration import whose types do not
+    reach a consumer (the package's own, or an `@types` package it declares).
+  - `emit.ts` emits the declarations of each package's `test/declarations/*.ts`
+    against the install under a consumer's strict settings (TS2883 when an
+    inferred type names one the entry does not export).
+  - An unbuilt package stops at the first stage with `<package>: no dist/`.
+  These modules and their specs, and `verify-artifacts.ts`, are byte-for-byte
+  nxgt-data's; fix a drift in nxgt-data first. Only `install.ts` and
+  `verify-artifacts.ts` differ (see below).
 
 ## Declared divergences from nxgt-data
 
@@ -131,4 +163,6 @@ CI runs the same, in this order, with no service container.
   since there are no services to start.
 - The artifact probe and the verify temp folder are named `nxgt-di-*`
   (`scripts/artifacts/install.ts`, `scripts/verify-artifacts.ts`), not
-  `nxgt-data-*`.
+  `nxgt-data-*`. These are the only two lines in `scripts/artifacts/` and
+  `scripts/verify-artifacts.ts` that differ from nxgt-data's; every other file
+  there is identical (`cmp`), `scripts/tsconfig.json` included.
