@@ -10,10 +10,12 @@ import type { AnyToken } from '../token/token';
 import { disposeOnce } from './dispose';
 import { initSingletons } from './init';
 import {
+	addedSince,
 	addProvider,
 	derivesFrom,
 	type Provider,
 	type Providers,
+	tick,
 } from './provide';
 import { resolveToken } from './resolve';
 import { createState, type State } from './state';
@@ -25,6 +27,8 @@ import type { Container, NoTokens } from './types';
  */
 class DiContainer {
 	readonly #state: State;
+	/** When it was made, on the `tick` clock. */
+	readonly #born = tick();
 
 	constructor(providers: Providers) {
 		this.#state = createState(providers);
@@ -47,6 +51,7 @@ class DiContainer {
 			slot: false,
 			dispose: options.dispose,
 			owned: true,
+			born: tick(),
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
 	};
@@ -62,6 +67,7 @@ class DiContainer {
 			slot: true,
 			dispose: undefined,
 			owned: false,
+			born: tick(),
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
 	};
@@ -76,12 +82,17 @@ class DiContainer {
 	readonly use = (module: {
 		build: (container: DiContainer) => unknown;
 	}): DiContainer => {
+		const mark = tick();
 		const built = module.build(this);
-		// The types trust what `build` returns; this checks it really grew
-		// from `this`, not from a Container of its own or another app's.
+		// The types trust what `build` returns. This checks it is `this`, or a
+		// Container made during the call that keeps every Provider of `this`
+		// and adds only Providers made during the call: not a Container of its
+		// own, nor one kept from an earlier call, even on a sibling of `this`.
 		if (
 			!(built instanceof DiContainer) ||
-			!derivesFrom(built.#state.providers, this.#state.providers)
+			(built !== this && built.#born <= mark) ||
+			!derivesFrom(built.#state.providers, this.#state.providers) ||
+			!addedSince(built.#state.providers, this.#state.providers, mark)
 		)
 			throw new ModuleEscapedError();
 		return built;

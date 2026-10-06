@@ -92,4 +92,33 @@ describe('defineModule and use', () => {
 			.use(data);
 		expect(await app.resolve(Db)).toEqual({ url: 'fake' });
 	});
+
+	test('a build that returns what it kept from an override of the same base is refused', async () => {
+		let kept: unknown;
+		const caching = defineModule<{ singletons: { config: { url: string } } }>()(
+			(c) => {
+				kept ??= c;
+				return kept as typeof c;
+			},
+		);
+		const base = container().provide(Config, () => ({ url: 'real' }));
+		const sibling = base.override(Config, { url: 'A' });
+		expect(await sibling.use(caching).resolve(Config)).toEqual({ url: 'A' });
+		expect(() => base.use(caching)).toThrow(ModuleEscapedError);
+	});
+
+	test('a build that returns a sibling it kept, Providers and all, is refused', () => {
+		const Other = token<string>()('other');
+		let kept: unknown;
+		const caching = defineModule<{ singletons: { config: { url: string } } }>()(
+			(c) => {
+				kept ??= c;
+				return kept as typeof c;
+			},
+		);
+		const base = container().provide(Config, () => ({ url: 'x' }));
+		const sibling = base.provide(Other, () => 'other');
+		expect(sibling.use(caching as never)).toBe(sibling as never);
+		expect(() => base.use(caching)).toThrow(ModuleEscapedError);
+	});
 });

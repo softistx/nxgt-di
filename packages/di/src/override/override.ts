@@ -1,4 +1,4 @@
-import type { Provider, Providers } from '../container/provide';
+import { type Provider, type Providers, tick } from '../container/provide';
 import { SlotOverrideError, TokenNotProvidedError } from '../errors/errors';
 import type { AnyToken } from '../token/token';
 
@@ -22,6 +22,7 @@ export function overrideProvider(
 		dispose: undefined,
 		owned: false,
 		replaces: existing,
+		born: tick(),
 	};
 	return new Map(providers).set(token.id, provider);
 }
