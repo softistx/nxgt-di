@@ -122,6 +122,10 @@ captive dependency again by another road.
 
 ### Reusable factories
 
+> These checks rely on `strictFunctionTypes`, which `strict: true` turns on.
+> With it off, a factory whose parameter is annotated can claim a Token that
+> is provided further down, and the mistake only shows at runtime.
+
 A factory declared apart is typed by what it uses, and fits every Container
 that provides at least that:
 
