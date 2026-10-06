@@ -11,6 +11,7 @@ export type DiErrorCode =
 	| 'DI_SCOPE_DISPOSED'
 	| 'DI_SCOPE_REQUIRED'
 	| 'DI_SLOT_MISSING'
+	| 'DI_SLOT_OVERRIDE'
 	| 'DI_DISPOSE_FAILED';
 
 /** The base of the errors that concern one Token. */
@@ -125,6 +126,23 @@ export class MissingSlotError extends DiError {
 			`createScope was not given a value for Slot ${slots.map((s) => `'${s}'`).join(', ')}`,
 		);
 		this.slots = slots;
+	}
+}
+
+/**
+ * `override` was given a Slot. The types prevent it; it is reached from
+ * JavaScript, or through a cast.
+ */
+export class SlotOverrideError extends DiError {
+	override readonly name = 'SlotOverrideError';
+	declare readonly token: string;
+	readonly code = 'DI_SLOT_OVERRIDE';
+
+	constructor(token: string) {
+		super(
+			token,
+			`Token '${token}' is a Slot: pass its value to createScope instead`,
+		);
 	}
 }
 

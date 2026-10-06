@@ -7,6 +7,7 @@ import {
 	MissingSlotError,
 	ScopeDisposedError,
 	ScopeRequiredError,
+	SlotOverrideError,
 	TokenNotProvidedError,
 } from './errors';
 
@@ -18,6 +19,7 @@ describe('errors', () => {
 		[new ScopeDisposedError('db'), 'DI_SCOPE_DISPOSED'],
 		[new ScopeRequiredError('db'), 'DI_SCOPE_REQUIRED'],
 		[new MissingSlotError(['db', 'tenant']), 'DI_SLOT_MISSING'],
+		[new SlotOverrideError('db'), 'DI_SLOT_OVERRIDE'],
 	] as const)('%p has a stable code and names its Token', (error, code) => {
 		expect(error).toBeInstanceOf(DiError);
 		expect(error).toBeInstanceOf(Error);

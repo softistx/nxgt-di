@@ -12,6 +12,11 @@ export interface Provider {
 	/** A Slot: no factory runs; each Scope is given the value. */
 	readonly slot: boolean;
 	readonly dispose: ((value: unknown) => unknown) | undefined;
+	/**
+	 * Whether the value is the Container's to dispose of. Not for an
+	 * overridden value, which the caller passed in and still owns.
+	 */
+	readonly owned: boolean;
 }
 
 /** The Providers of one Container, by Token id. Never mutated once built. */

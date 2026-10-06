@@ -1,8 +1,10 @@
 import { ContainerDisposedError, MissingSlotError } from '../errors/errors';
 import type { Lifetime } from '../lifetime/lifetime';
+import { overrideProvider } from '../override/override';
 import { DiScope } from '../scope/scope';
 import type { AnyToken } from '../token/token';
 import { disposeOnce } from './dispose';
+import { initSingletons } from './init';
 import { addProvider, type Provider, type Providers } from './provide';
 import { resolveToken } from './resolve';
 import { createState, type State } from './state';
@@ -35,6 +37,7 @@ class DiContainer {
 			lifetime: options.lifetime ?? 'singleton',
 			slot: false,
 			dispose: options.dispose,
+			owned: true,
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
 	};
@@ -49,6 +52,7 @@ class DiContainer {
 			lifetime: 'scoped',
 			slot: true,
 			dispose: undefined,
+			owned: false,
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
 	};
@@ -59,6 +63,14 @@ class DiContainer {
 		if (this.#state.disposal) throw new ContainerDisposedError();
 		return new DiScope(this.#state, slots);
 	};
+
+	readonly use = (module: { build: (container: DiContainer) => unknown }) =>
+		module.build(this);
+
+	readonly override = (token: AnyToken, value: unknown): DiContainer =>
+		new DiContainer(overrideProvider(this.#state.providers, token, value));
+
+	readonly init = (): Promise<void> => initSingletons(this.#state);
 
 	readonly resolve = (token: AnyToken): Promise<unknown> =>
 		resolveToken(this.#state, undefined, token);
