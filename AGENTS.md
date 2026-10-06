@@ -11,7 +11,7 @@ consumers: no `@nxgt/*` library package depends on it.
 | package | what it is |
 | --- | --- |
 | `@nxgt/di` | the core: typed Tokens, a Container whose type grows with each `provide`, lifetimes, Scopes, Slots, disposal. **No dependency at all**, and no `reflect-metadata` |
-| `@nxgt/di-hono` | a Hono middleware: a lazy Scope per request on `c.var.scope`, disposed in `finally`, and `expose` to put resolved values on `c.var`. `"private": true` until its first release |
+| `@nxgt/di-hono` | a Hono middleware: a lazy Scope per request on `c.var.scope`, disposed in `finally`, and `expose` to put resolved values on `c.var` |
 
 The vocabulary (Token, Provider, Container, Scope, Slot, Captive dependency...)
 is in [CONTEXT.md](./CONTEXT.md); use those words. The decisions are in
@@ -110,7 +110,7 @@ CI runs the same, in this order, with no service container.
   bug.
 - **A new package starts `"private": true`.** Removing it is a deliberate commit of
   its own, made when the package's first release is ready, never as a side effect.
-  `@nxgt/di` went public that way for 0.1.0.
+  `@nxgt/di` went public that way for 0.1.0, and `@nxgt/di-hono` for its own 0.1.0.
 - **The skeleton is nxgt-data's.** The shared root files are byte-for-byte
   copies; fix a drift in nxgt-data first. The `diff` loop is in the
   `nxgt-monorepo:lay-out-a-library-monorepo` skill.
