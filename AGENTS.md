@@ -152,10 +152,19 @@ CI runs the same, in this order, with no service container.
 - `tsconfig.base.json` is nxgt-data's strict one (not nxgt-telemetry's, which
   still carries `experimentalDecorators`: this library's premise is that it does
   not need them).
-- `ci.yml` has no service caches and no `newest-peers` job (no peer to widen
-  yet); it does not run on `push` to `develop` (nothing is cached).
-- No `check-nxgt-versions`, `meilisearch`, `redis`, `seaweedfs` or
-  `newest-peers` scripts: they serve nxgt-data's servers and packages.
+- `ci.yml` has no service caches; it does not run on `push` to `develop`
+  (nothing is cached). Its `newest-peers` job is nxgt-data's, minus the
+  service steps (`timeout-minutes` is this repository's own, 15), and
+  `scripts/newest-peers.ts` and its spec are byte copies of nxgt-data's. The
+  job rewrites every manifest that installs a peer to the newest end of its
+  range (`hono` `^4.8.0` in `@nxgt/di-hono`, `typescript` `^6.0.3`), deletes
+  `bun.lock`, installs, then builds, typechecks, tests and verifies the
+  artifacts. Run on 2026-10-06 it resolved hono 4.13.13 and TypeScript 6.0.3
+  and passed. It is informational, not a required check: an upstream release
+  can turn it red with no change here. Run the script on a throwaway checkout,
+  never commit what it writes. It leaves out Biome and the changeset check.
+- No `check-nxgt-versions`, `meilisearch`, `redis` or `seaweedfs` scripts: they
+  serve nxgt-data's servers and packages.
 - `typecheck` adds `typecheck:consumer`.
 - `.github/workflows/deprecate.yml` is nxgt-telemetry's, taken as is, because
   nxgt-data has none. `nxgt-versions.yml` is dropped along with
