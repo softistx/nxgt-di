@@ -1,4 +1,4 @@
-import type { Container, NoTokens } from '../container/types';
+import type { NoTokens } from '../container/types';
 
 /**
  * What a Module needs from the Container it is used in, one map each:
@@ -19,27 +19,12 @@ export type Need<R, K extends keyof Requirements> = K extends keyof R
 	? NonNullable<R[K]>
 	: NoTokens;
 
-/** The Container a Module's `build` is handed: its requirements, no more. */
-export type ModuleContainer<R> = Container<
-	Need<R, 'singletons'>,
-	{
-		[K in
-			| keyof Need<R, 'scoped'>
-			| keyof Need<R, 'slots'>]: K extends keyof Need<R, 'slots'>
-			? Need<R, 'slots'>[K]
-			: K extends keyof Need<R, 'scoped'>
-				? Need<R, 'scoped'>[K]
-				: never;
-	},
-	Need<R, 'slots'>
->;
-
 /** Carries a Module's types. Type-only: no Module has it at runtime. */
 declare const moduleTypes: unique symbol;
 
 /**
  * A reusable group of Providers that states what it needs (`R`) and what it
- * adds to each map. Made by `module<R>()(build)`, applied with `use`.
+ * adds to each map. Made by `defineModule<R>()(build)`, applied with `use`.
  */
 export interface Module<R extends Requirements, AddS, AddSc, AddSl> {
 	readonly [moduleTypes]: (needs: R) => [AddS, AddSc, AddSl];

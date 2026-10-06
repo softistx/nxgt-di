@@ -7,6 +7,7 @@ export {
 	DisposeError,
 	DuplicateTokenNameError,
 	MissingSlotError,
+	ModuleEscapedError,
 	ScopeDisposedError,
 	ScopeRequiredError,
 	SlotOverrideError,
@@ -14,7 +15,7 @@ export {
 } from './errors/errors';
 export type { Factory, Resolver } from './lifetime/captive';
 export type { Bound, Lifetime, ProvideOptions } from './lifetime/lifetime';
-export { module } from './module/module';
+export { defineModule } from './module/define-module';
 export type { Module, Requirements } from './module/types';
 export type { Scope } from './scope/types';
 export {

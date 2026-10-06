@@ -1,7 +1,7 @@
 // Generated: 60 Providers that mix singleton, scoped, transient (both bounds)
 // and Slots, plus two Modules. It must typecheck without TS2589; its
 // instantiation count is recorded in AGENTS.md.
-import { container, module, token } from '../../src/index';
+import { container, defineModule, token } from '../../src/index';
 import type { Equal, Expect } from './assert';
 
 const scoped = { lifetime: 'scoped' } as const;
@@ -69,7 +69,7 @@ const T57 = token<{ v57: number }>()('t57');
 const T58 = token<{ v58: number }>()('t58');
 const T59 = token<{ v59: number }>()('t59');
 
-const first = module<{
+const first = defineModule<{
 	singletons: { t19: { v19: number } };
 	scoped: { t18: { v18: number } };
 }>()((c) =>
@@ -79,7 +79,7 @@ const first = module<{
 		.provide(T22, async ({ get }) => ({ v22: (await get(T20)).v20 }), bounded),
 );
 
-const second = module<{
+const second = defineModule<{
 	singletons: { t39: { v39: number } };
 	scoped: { t38: { v38: number } };
 }>()((c) =>

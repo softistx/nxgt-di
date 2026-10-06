@@ -1,8 +1,8 @@
 import {
 	type Container,
 	container,
+	defineModule,
 	type Module,
-	module,
 	type NoTokens,
 	token,
 } from '../../src/index';
@@ -23,7 +23,7 @@ declare const db: Db;
 const after = <T>(_dependency: unknown, value: T): T => value;
 
 // A Module states what it needs, one map each, and its type lists what it adds.
-const data = module<{ singletons: { config: Config } }>()((c) =>
+const data = defineModule<{ singletons: { config: Config } }>()((c) =>
 	c
 		.provide(Database, async ({ get }) => after(await get(Settings), db))
 		.provide(Repo, () => 'repo', { lifetime: 'scoped' }),
@@ -39,17 +39,19 @@ export type Data = Expect<
 		>
 	>
 >;
-const web = module<{ scoped: { repo: string }; slots: { principal: User } }>()(
-	(c) =>
-		c.provide(
-			Audit,
-			async ({ get }) => `${(await get(Principal)).id}:${await get(Repo)}`,
-			{ lifetime: 'scoped' },
-		),
+const web = defineModule<{
+	scoped: { repo: string };
+	slots: { principal: User };
+}>()((c) =>
+	c.provide(
+		Audit,
+		async ({ get }) => `${(await get(Principal)).id}:${await get(Repo)}`,
+		{ lifetime: 'scoped' },
+	),
 );
 
 // Inside build, only the requirements are visible.
-module<{ singletons: { config: Config } }>()((c) =>
+defineModule<{ singletons: { config: Config } }>()((c) =>
 	c.provide(Audit, async ({ get }) => {
 		// @ts-expect-error Token 'db' is not provided
 		await get(Database);
@@ -57,11 +59,11 @@ module<{ singletons: { config: Config } }>()((c) =>
 	}),
 );
 // probe: a requirement is.
-module<{ singletons: { config: Config } }>()((c) =>
+defineModule<{ singletons: { config: Config } }>()((c) =>
 	c.provide(Audit, async ({ get }) => (await get(Settings)).url),
 );
 // A singleton requirement is a singleton inside: no captive through a Module.
-module<{ scoped: { repo: string } }>()((c) =>
+defineModule<{ scoped: { repo: string } }>()((c) =>
 	c.provide(Audit, async ({ get }) => {
 		// @ts-expect-error Token 'repo' is scoped, captured by a singleton
 		return get(Repo);

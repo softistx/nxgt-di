@@ -12,6 +12,7 @@ export type DiErrorCode =
 	| 'DI_SCOPE_REQUIRED'
 	| 'DI_SLOT_MISSING'
 	| 'DI_SLOT_OVERRIDE'
+	| 'DI_MODULE_ESCAPED'
 	| 'DI_DISPOSE_FAILED';
 
 /** The base of the errors that concern one Token. */
@@ -61,18 +62,22 @@ export class DuplicateTokenNameError extends DiError {
 }
 
 /**
- * A resolve, or a `createScope`, on a Container whose disposal has begun.
- * `token` is the Token resolved, or `undefined` for `createScope`.
+ * A resolve, a `createScope` or an `init` on a Container whose disposal has
+ * begun. `token` is the Token resolved, or `undefined` for the other two,
+ * which concern no Token.
  */
 export class ContainerDisposedError extends DiError {
 	override readonly name = 'ContainerDisposedError';
 	readonly code = 'DI_CONTAINER_DISPOSED';
 
-	constructor(token?: string) {
+	constructor(
+		token?: string,
+		action: 'create a Scope' | 'init' = 'create a Scope',
+	) {
 		super(
 			token,
 			token === undefined
-				? 'Cannot create a Scope: the Container has been disposed'
+				? `Cannot ${action}: the Container has been disposed`
 				: `Cannot resolve Token '${token}': the Container has been disposed`,
 		);
 	}
@@ -142,6 +147,24 @@ export class SlotOverrideError extends DiError {
 		super(
 			token,
 			`Token '${token}' is a Slot: pass its value to createScope instead`,
+		);
+	}
+}
+
+/**
+ * A Module's `build` returned something other than the Container it was
+ * handed with Providers added: a Container of its own, or one it kept from an
+ * earlier `use`. The types cannot see it; `use` checks it at runtime.
+ */
+export class ModuleEscapedError extends DiError {
+	override readonly name = 'ModuleEscapedError';
+	declare readonly token: undefined;
+	readonly code = 'DI_MODULE_ESCAPED';
+
+	constructor() {
+		super(
+			undefined,
+			"A Module's build must return the Container it was given, with Providers added",
 		);
 	}
 }

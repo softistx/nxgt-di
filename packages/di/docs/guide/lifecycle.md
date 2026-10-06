@@ -47,6 +47,6 @@ await app.init();
 
 Disposing of the Container does not dispose of its live Scopes: whoever made
 a Scope disposes of it (see [Scopes and Slots](scopes-and-slots.md)). Once the
-Container is disposed, `createScope` throws and a resolve rejects with
-`ContainerDisposedError`. Disposal waits for factories still running, without
+Container is disposed, `createScope` throws, and `init()` and a resolve
+reject, with `ContainerDisposedError`. Disposal waits for factories still running, without
 a time limit; see [troubleshooting](../troubleshooting.md#disposal-never-finishes).

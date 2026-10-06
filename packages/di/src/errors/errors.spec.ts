@@ -5,6 +5,7 @@ import {
 	DisposeError,
 	DuplicateTokenNameError,
 	MissingSlotError,
+	ModuleEscapedError,
 	ScopeDisposedError,
 	ScopeRequiredError,
 	SlotOverrideError,
@@ -38,5 +39,15 @@ describe('errors', () => {
 		expect(error.errors).toEqual(causes);
 		expect(error.tokens).toEqual(['cache', 'db']);
 		expect(error.message).toContain("'cache', 'db'");
+	});
+
+	test.each([
+		[new ModuleEscapedError(), 'DI_MODULE_ESCAPED'],
+		[new ContainerDisposedError(), 'DI_CONTAINER_DISPOSED'],
+		[new ContainerDisposedError(undefined, 'init'), 'DI_CONTAINER_DISPOSED'],
+	] as const)('%p concerns no Token', (error, code) => {
+		expect(error).toBeInstanceOf(DiError);
+		expect(error.code).toBe(code);
+		expect(error.token).toBeUndefined();
 	});
 });

@@ -4,7 +4,8 @@ One entry for each error you can hit, headed by the message you will search
 for. Runtime errors carry a stable `code`, so match on the `code` or the class,
 never on the message. Each `DiError` also carries `token`, the name of the
 Token it is about: a `string` on every class, except `ContainerDisposedError`,
-where it is `string | undefined` (`undefined` when `createScope` was called).
+where it is `string | undefined` (`undefined` when `createScope` or `init`
+was called), and `ModuleEscapedError`, where it is `undefined`.
 
 ## Compile errors
 
@@ -290,6 +291,31 @@ missing Slot.
 for each Slot. A Slot given `undefined` counts as given.
 
 **Fix:** pass every Slot, keyed by Token name.
+
+### `A Module's build must return the Container it was given, with Providers added`
+
+`ModuleEscapedError`, code `DI_MODULE_ESCAPED`.
+
+**When:** `use` ran a Module whose `build` returned a Container that did not
+grow from the one it was handed: a `container()` of its own, or a Container
+it kept from an earlier `use` (in another app, or a test). The types cannot
+see this, since they trust what `build` returns.
+
+**Fix:** write `build` as one chain on its argument, and keep nothing
+between calls:
+
+```ts
+defineModule<{ singletons: { config: AppConfig } }>()((c) => c.provide(Db, connect));
+```
+
+### `Cannot init: the Container has been disposed`
+
+`ContainerDisposedError`, code `DI_CONTAINER_DISPOSED`, with `token`
+`undefined`.
+
+**When:** `init()` was called after the Container's disposal began.
+
+**Fix:** call `init()` at boot, before you take work; dispose at shutdown.
 
 ## Disposal never finishes
 

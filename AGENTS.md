@@ -58,7 +58,7 @@ green.
   resolves exactly as before.
 - **The type checker stays affordable.** `packages/di/test/types/stress.ts`
   (60 Providers mixing every lifetime, Slots and two Modules) must not hit
-  TS2589. Its cost when slice 4 landed: 92,350 instantiations (`tsc
+  TS2589. Its cost when slice 4 landed: 92,089 instantiations (`tsc
   --extendedDiagnostics` on that file alone, from a temp tsconfig extending
   `tsconfig.base.json` with `noEmit`). A change that raises it by more than
   about 20% says why in its commit.

@@ -41,7 +41,7 @@ already provided fails to compile (and, past a cast, throws
 every resolve; the Container still owns it and disposes of it, in reverse
 creation order with everything else. Errors carry a stable `code`
 (`DI_TOKEN_NOT_PROVIDED`, `DI_DUPLICATE_TOKEN_NAME`, `DI_CONTAINER_DISPOSED`,
-`DI_SCOPE_DISPOSED`, `DI_SCOPE_REQUIRED`, `DI_SLOT_MISSING`, `DI_SLOT_OVERRIDE`,
+`DI_SCOPE_DISPOSED`, `DI_SCOPE_REQUIRED`, `DI_SLOT_MISSING`, `DI_SLOT_OVERRIDE`, `DI_MODULE_ESCAPED`,
 `DI_DISPOSE_FAILED`).
 
 ### Scopes and Slots
@@ -69,14 +69,19 @@ Container leaves live Scopes to their owners.
 ### Modules, overrides and boot
 
 ```ts
-const data = module<{ singletons: { config: Config } }>()((c) =>
+import { container, defineModule } from '@nxgt/di';
+
+// Config and Db are the Tokens from the first snippet.
+const data = defineModule<{ singletons: { config: { url: string } } }>()((c) =>
   c.provide(Db, async ({ get }) => Database.connect((await get(Config)).url)),
 );
-const app = container().provide(Config, loadConfig).use(data); // fails to compile if Config is missing
+const app = container()
+  .provide(Config, () => ({ url: process.env.MONGO_URI ?? '' }))
+  .use(data); // fails to compile if 'config' is missing
 
 await app.init(); // every singleton now, in provide order
 
-const faked = app.override(Db, fakeDb); // a new Container; app is unchanged
+const faked = app.override(Db, fakeDb); // fakeDb: your test double; app is unchanged
 ```
 
 ## Documentation

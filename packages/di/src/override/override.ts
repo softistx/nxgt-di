@@ -21,6 +21,7 @@ export function overrideProvider(
 		factory: () => value,
 		dispose: undefined,
 		owned: false,
+		replaces: existing,
 	};
 	return new Map(providers).set(token.id, provider);
 }

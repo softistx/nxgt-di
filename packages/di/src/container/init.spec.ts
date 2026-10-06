@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { ContainerDisposedError } from '../errors/errors';
 import { token } from '../token/token';
 import { container } from './container';
 
@@ -50,10 +51,17 @@ describe('init', () => {
 		expect(made).toEqual(['b']);
 	});
 
-	test('rejects once the Container is disposed', async () => {
-		const app = container().provide(A, () => 'a');
-		await app[Symbol.asyncDispose]();
-		await expect(app.init()).rejects.toThrow('has been disposed');
+	test('rejects once the Container is disposed, even with no singleton', async () => {
+		const withOne = container().provide(A, () => 'a');
+		const empty = container();
+		for (const app of [withOne, empty]) {
+			await app[Symbol.asyncDispose]();
+			const error = await app.init().catch((e) => e);
+			expect(error).toBeInstanceOf(ContainerDisposedError);
+			expect(error.message).toBe(
+				'Cannot init: the Container has been disposed',
+			);
+		}
 	});
 
 	test('is bound', async () => {

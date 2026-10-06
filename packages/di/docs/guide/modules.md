@@ -4,25 +4,32 @@ A **Module** is a reusable group of Providers that states which Tokens it
 needs, and is added to a Container that already provides them.
 
 ```ts
-import { module, token } from '@nxgt/di';
+import { container, defineModule, token } from '@nxgt/di';
+import { Database, UserRepository } from './db'; // your own classes
 
+interface AppConfig {
+  url: string;
+}
+
+export const Config = token<AppConfig>()('config');
 export const Db = token<Database>()('db');
 export const Users = token<UserRepository>()('users');
 
-export const data = module<{ singletons: { config: Config } }>()((c) =>
+// Needs a singleton 'config'; adds 'db' (singleton) and 'users' (scoped).
+export const data = defineModule<{ singletons: { config: AppConfig } }>()((c) =>
   c
-    .provide(Db, async ({ get }) => Database.connect((await get(ConfigToken)).url), {
+    .provide(Db, async ({ get }) => Database.connect((await get(Config)).url), {
       dispose: (db) => db.close(),
     })
     .provide(Users, async ({ get }) => new UserRepository(await get(Db)), { lifetime: 'scoped' }),
 );
 
 const app = container()
-  .provide(ConfigToken, () => loadConfig())
+  .provide(Config, () => ({ url: process.env.MONGO_URI ?? '' }))
   .use(data); // now provides 'config', 'db' and 'users'
 ```
 
-`module<Requirements>()(build)` is curried for the same reason `token` is:
+`defineModule<Requirements>()(build)` is curried for the same reason `token` is:
 you spell out the requirements, and TypeScript infers what `build` adds.
 
 ## Requirements, one map each
@@ -37,7 +44,7 @@ rather than as a Container type:
 | `slots` | the Module needs these declared as Slots | a Slot only |
 
 ```ts
-module<{
+defineModule<{
   singletons: { db: Database };
   scoped: { requestId: string };
   slots: { principal: User };
@@ -66,5 +73,11 @@ It fails to compile, with a message naming each gap, when:
   `Module provides Token 'db', which is already provided`
 
 As with `provide`, what a Module adds is visible only to what comes after
-`use`. One Module may be used by any number of Containers; each gets its own
+`use`.
+
+`build` must return the Container it was handed, with Providers added. A
+`build` that returns a Container of its own, or one it kept from an earlier
+`use`, would hand the app values it never declared; `use` throws
+`ModuleEscapedError` (`DI_MODULE_ESCAPED`) instead. Keep `build` a plain
+chain on its argument. One Module may be used by any number of Containers; each gets its own
 values.

@@ -1,11 +1,20 @@
-import { ContainerDisposedError, MissingSlotError } from '../errors/errors';
+import {
+	ContainerDisposedError,
+	MissingSlotError,
+	ModuleEscapedError,
+} from '../errors/errors';
 import type { Lifetime } from '../lifetime/lifetime';
 import { overrideProvider } from '../override/override';
 import { DiScope } from '../scope/scope';
 import type { AnyToken } from '../token/token';
 import { disposeOnce } from './dispose';
 import { initSingletons } from './init';
-import { addProvider, type Provider, type Providers } from './provide';
+import {
+	addProvider,
+	derivesFrom,
+	type Provider,
+	type Providers,
+} from './provide';
 import { resolveToken } from './resolve';
 import { createState, type State } from './state';
 import type { Container, NoTokens } from './types';
@@ -64,13 +73,27 @@ class DiContainer {
 		return new DiScope(this.#state, slots);
 	};
 
-	readonly use = (module: { build: (container: DiContainer) => unknown }) =>
-		module.build(this);
+	readonly use = (module: {
+		build: (container: DiContainer) => unknown;
+	}): DiContainer => {
+		const built = module.build(this);
+		// The types trust what `build` returns; this checks it really grew
+		// from `this`, not from a Container of its own or another app's.
+		if (
+			!(built instanceof DiContainer) ||
+			!derivesFrom(built.#state.providers, this.#state.providers)
+		)
+			throw new ModuleEscapedError();
+		return built;
+	};
 
 	readonly override = (token: AnyToken, value: unknown): DiContainer =>
 		new DiContainer(overrideProvider(this.#state.providers, token, value));
 
-	readonly init = (): Promise<void> => initSingletons(this.#state);
+	readonly init = (): Promise<void> =>
+		this.#state.disposal
+			? Promise.reject(new ContainerDisposedError(undefined, 'init'))
+			: initSingletons(this.#state);
 
 	readonly resolve = (token: AnyToken): Promise<unknown> =>
 		resolveToken(this.#state, undefined, token);

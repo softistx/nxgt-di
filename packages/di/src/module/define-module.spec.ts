@@ -1,24 +1,25 @@
 import { describe, expect, test } from 'bun:test';
 import { container } from '../container/container';
-import { DuplicateTokenNameError } from '../errors/errors';
+import type { Container } from '../container/types';
+import { DuplicateTokenNameError, ModuleEscapedError } from '../errors/errors';
 import { token } from '../token/token';
-import { module } from './module';
+import { defineModule } from './define-module';
 
 const Config = token<{ url: string }>()('config');
 const Db = token<{ url: string }>()('db');
 const Session = token<{ user: string }>()('session');
 const Principal = token<string>()('principal');
 
-const data = module<{ singletons: { config: { url: string } } }>()((c) =>
+const data = defineModule<{ singletons: { config: { url: string } } }>()((c) =>
 	c.provide(Db, async ({ get }) => ({ url: (await get(Config)).url })),
 );
-const web = module<{ slots: { principal: string } }>()((c) =>
+const web = defineModule<{ slots: { principal: string } }>()((c) =>
 	c.provide(Session, async ({ get }) => ({ user: await get(Principal) }), {
 		lifetime: 'scoped',
 	}),
 );
 
-describe('module and use', () => {
+describe('defineModule and use', () => {
 	test('a Module’s Providers are added, and see what the Container has', async () => {
 		const app = container()
 			.provide(Config, () => ({ url: 'mongodb://x' }))
@@ -53,5 +54,42 @@ describe('module and use', () => {
 			.provide(Config, () => ({ url: 'x' }))
 			.provide(Db, () => ({ url: 'y' }));
 		expect(() => base.use(data as never)).toThrow(DuplicateTokenNameError);
+	});
+
+	test('a build that returns a Container of its own is refused', () => {
+		const Repo = token<string>()('repo');
+		const escaping = defineModule()((_c) =>
+			container().provide(Repo, () => 'r'),
+		);
+		const app = container().provide(Config, () => ({ url: 'x' }));
+		expect(() => app.use(escaping)).toThrow(ModuleEscapedError);
+		expect(() => app.use(escaping)).toThrow(
+			"A Module's build must return the Container it was given, with Providers added",
+		);
+	});
+
+	test('a build that hands one app the Container it built for another is refused', async () => {
+		type Built = Container<{ config: { url: string }; db: { url: string } }>;
+		let kept: Built | undefined;
+		const sticky = defineModule<{ singletons: { config: { url: string } } }>()(
+			(c) => {
+				kept ??= c.provide(Db, () => ({ url: 'db' }));
+				return kept;
+			},
+		);
+		const a = container()
+			.provide(Config, () => ({ url: 'a' }))
+			.use(sticky);
+		expect(await a.resolve(Config)).toEqual({ url: 'a' });
+		const b = container().provide(Config, () => ({ url: 'b' }));
+		expect(() => b.use(sticky)).toThrow(ModuleEscapedError);
+	});
+
+	test('an override before use still counts as the same Container', async () => {
+		const app = container()
+			.provide(Config, () => ({ url: 'real' }))
+			.override(Config, { url: 'fake' })
+			.use(data);
+		expect(await app.resolve(Db)).toEqual({ url: 'fake' });
 	});
 });

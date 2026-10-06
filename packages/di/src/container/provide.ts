@@ -17,6 +17,22 @@ export interface Provider {
 	 * overridden value, which the caller passed in and still owns.
 	 */
 	readonly owned: boolean;
+	/** The Provider an `override` replaced, so `use` can trace the lineage. */
+	readonly replaces?: Provider | undefined;
+}
+
+/**
+ * Whether `derived` holds every Provider of `base`, as the same object or as
+ * an `override` of it: what a Module's `build` returns when it added to the
+ * Container it was handed, and nothing else.
+ */
+export function derivesFrom(derived: Providers, base: Providers): boolean {
+	for (const [id, provider] of base) {
+		let candidate = derived.get(id);
+		while (candidate && candidate !== provider) candidate = candidate.replaces;
+		if (!candidate) return false;
+	}
+	return true;
 }
 
 /** The Providers of one Container, by Token id. Never mutated once built. */
