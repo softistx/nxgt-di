@@ -7,5 +7,6 @@ Guides:
 
 - [Tokens and Providers](guide/tokens-and-providers.md): Tokens, provide order, lifetimes, the captive check, a transient's bound, disposal
 - [Scopes and Slots](guide/scopes-and-slots.md): one Scope per request, Slots for the request's own values, who disposes of what
-
-More guides (Modules, testing) arrive with the first release.
+- [Modules](guide/modules.md): reusable groups of Providers, their requirements, and `use`
+- [Testing](guide/testing.md): `override` a dependency, fake a Slot through `createScope`
+- [Lifecycle](guide/lifecycle.md): `init` at boot, disposal at shutdown, `await using`

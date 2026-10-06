@@ -1,9 +1,22 @@
-import { ContainerDisposedError, MissingSlotError } from '../errors/errors';
+import {
+	ContainerDisposedError,
+	MissingSlotError,
+	ModuleEscapedError,
+} from '../errors/errors';
 import type { Lifetime } from '../lifetime/lifetime';
+import { overrideProvider } from '../override/override';
 import { DiScope } from '../scope/scope';
 import type { AnyToken } from '../token/token';
 import { disposeOnce } from './dispose';
-import { addProvider, type Provider, type Providers } from './provide';
+import { initSingletons } from './init';
+import {
+	addedSince,
+	addProvider,
+	derivesFrom,
+	type Provider,
+	type Providers,
+	tick,
+} from './provide';
 import { resolveToken } from './resolve';
 import { createState, type State } from './state';
 import type { Container, NoTokens } from './types';
@@ -14,6 +27,8 @@ import type { Container, NoTokens } from './types';
  */
 class DiContainer {
 	readonly #state: State;
+	/** When it was made, on the `tick` clock. */
+	readonly #born = tick();
 
 	constructor(providers: Providers) {
 		this.#state = createState(providers);
@@ -35,6 +50,8 @@ class DiContainer {
 			lifetime: options.lifetime ?? 'singleton',
 			slot: false,
 			dispose: options.dispose,
+			owned: true,
+			born: tick(),
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
 	};
@@ -49,6 +66,8 @@ class DiContainer {
 			lifetime: 'scoped',
 			slot: true,
 			dispose: undefined,
+			owned: false,
+			born: tick(),
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
 	};
@@ -59,6 +78,37 @@ class DiContainer {
 		if (this.#state.disposal) throw new ContainerDisposedError();
 		return new DiScope(this.#state, slots);
 	};
+
+	readonly use = (module: {
+		build: (container: DiContainer) => unknown;
+	}): DiContainer => {
+		const mark = tick();
+		const built = module.build(this);
+		// The types trust what `build` returns. This checks it is `this`, or a
+		// Container made during the call that keeps every Provider of `this`
+		// and adds only Providers made during the call: not a Container of its
+		// own, nor one kept from an earlier call, even on a sibling of `this`.
+		if (
+			// A brand check, not `instanceof`: an `Object.create(prototype)`
+			// fake passes `instanceof`, then fails on the private fields.
+			typeof built !== 'object' ||
+			built === null ||
+			!(#born in built) ||
+			(built !== this && built.#born <= mark) ||
+			!derivesFrom(built.#state.providers, this.#state.providers) ||
+			!addedSince(built.#state.providers, this.#state.providers, mark)
+		)
+			throw new ModuleEscapedError();
+		return built;
+	};
+
+	readonly override = (token: AnyToken, value: unknown): DiContainer =>
+		new DiContainer(overrideProvider(this.#state.providers, token, value));
+
+	readonly init = (): Promise<void> =>
+		this.#state.disposal
+			? Promise.reject(new ContainerDisposedError(undefined, 'init'))
+			: initSingletons(this.#state);
 
 	readonly resolve = (token: AnyToken): Promise<unknown> =>
 		resolveToken(this.#state, undefined, token);

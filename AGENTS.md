@@ -56,8 +56,12 @@ green.
   in-flight promise.**
 - **`override` never mutates.** It returns a new Container, and the original
   resolves exactly as before.
-- **The type checker stays affordable.** `test/types/stress.ts` (60 Providers,
-  once it exists) must not hit TS2589.
+- **The type checker stays affordable.** `packages/di/test/types/stress.ts`
+  (60 Providers mixing every lifetime, Slots and two Modules) must not hit
+  TS2589. Its cost when slice 4 landed: 92,089 instantiations (`tsc
+  --extendedDiagnostics` on that file alone, from a temp tsconfig extending
+  `tsconfig.base.json` with `noEmit`). A change that raises it by more than
+  about 20% says why in its commit.
 
 ## The green bar
 

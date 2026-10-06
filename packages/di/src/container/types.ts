@@ -7,33 +7,18 @@ import type {
 	ProvideOptions,
 	Sees,
 } from '../lifetime/lifetime';
+import type { Module, Requirements, Usable } from '../module/types';
+import type { Overridable } from '../override/types';
 import type { CreateScopeArgs, Scope } from '../scope/types';
-import type { IsLiteralName, LiteralName } from '../token/name';
+import type { IsLiteralName } from '../token/name';
 import type { AnyToken, Token, TokenValue } from '../token/token';
+import type { NotOneLiteralName, Unprovided } from './names';
 
 /** Carries a Container's maps. Type-only: no Container has it at runtime. */
 declare const maps: unique symbol;
 
 /** No Token provided yet: the type of `container()`. */
 export type NoTokens = Record<never, never>;
-
-/**
- * Refuses a name that is not exactly one string literal (a widened `string`
- * or a pattern would key every name at once), and a name already provided,
- * as a singleton, scoped, or a Slot.
- */
-export type Unprovided<N extends string, Singletons, Scoped> = LiteralName<N> &
-	// Distributes, which is harmless: LiteralName already refuses a union.
-	// Kept distributive on purpose: a non-distributive form made every
-	// Container<P> assignable to every Container<Q>.
-	(N extends keyof Singletons | keyof Scoped
-		? { readonly [K in `Token name '${N}' is already provided`]: never }
-		: unknown);
-
-/** What `provide` and `slot` return for a name that is not one literal. */
-export interface NotOneLiteralName {
-	readonly 'a Token name must be exactly one string literal': never;
-}
 
 /**
  * The Providers an application has declared. Its type lists every Token it
@@ -125,6 +110,60 @@ export interface Container<
 	createScope<V extends Slots>(
 		...slots: CreateScopeArgs<V, Slots>
 	): Scope<Singletons, Scoped>;
+
+	/**
+	 * Adds a Module's Providers. It fails to compile when the Container lacks
+	 * what the Module needs (or has it with another value type, or scoped
+	 * where a singleton is needed), or already has a name the Module adds.
+	 * What it adds is visible only to what comes after.
+	 */
+	use<R extends Requirements, AddS, AddSc, AddSl>(
+		module: Module<R, AddS, AddSc, AddSl> &
+			Usable<R, AddS, AddSc, Singletons, Scoped, Slots>,
+	): Container<
+		{
+			[K in keyof Singletons | keyof AddS]: K extends keyof Singletons
+				? Singletons[K]
+				: K extends keyof AddS
+					? AddS[K]
+					: never;
+		},
+		{
+			[K in keyof Scoped | keyof AddSc]: K extends keyof Scoped
+				? Scoped[K]
+				: K extends keyof AddSc
+					? AddSc[K]
+					: never;
+		},
+		{
+			[K in keyof Slots | keyof AddSl]: K extends keyof Slots
+				? Slots[K]
+				: K extends keyof AddSl
+					? AddSl[K]
+					: never;
+		}
+	>;
+
+	/**
+	 * A new Container with the same Providers, except that `token` gives
+	 * `value`, whatever its lifetime: a fake in a test, usually. The original
+	 * is unchanged, and the two share no created value. The Container does
+	 * not dispose of `value`: the caller owns it. A Slot is refused: give its
+	 * value to `createScope`.
+	 */
+	override<K extends AnyToken>(
+		token: K & Overridable<K, Singletons, Scoped, Slots>,
+		value: NoInfer<TokenValue<K>>,
+	): Container<Singletons, Scoped, Slots>;
+
+	/**
+	 * Creates every singleton now, in provide order, so a failing connection
+	 * stops the boot rather than the first request. Rejects with the first
+	 * factory's error; what failed is not cached, so a later resolve retries.
+	 * Transients, even bound to singleton, are not created: nothing caches
+	 * them.
+	 */
+	init(): Promise<void>;
 
 	/**
 	 * Disposes of every value this Container created, in reverse creation

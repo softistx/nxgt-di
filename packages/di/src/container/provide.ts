@@ -12,6 +12,58 @@ export interface Provider {
 	/** A Slot: no factory runs; each Scope is given the value. */
 	readonly slot: boolean;
 	readonly dispose: ((value: unknown) => unknown) | undefined;
+	/**
+	 * Whether the value is the Container's to dispose of. Not for an
+	 * overridden value, which the caller passed in and still owns.
+	 */
+	readonly owned: boolean;
+	/** The Provider an `override` replaced, so `use` can trace the lineage. */
+	readonly replaces?: Provider | undefined;
+	/** When it was made, on the `tick` clock: `use` accepts only newer ones. */
+	readonly born: number;
+}
+
+let clock = 0;
+
+/**
+ * A module-level monotonic clock. Every Provider and every Container is
+ * stamped with it, so `use` can tell what a Module's `build` made during the
+ * call from what existed before: a Container or a Provider kept from an
+ * earlier call, even one grown from the same base.
+ */
+export function tick(): number {
+	clock += 1;
+	return clock;
+}
+
+/**
+ * Whether `derived` holds every Provider of `base`, as the same object or as
+ * an `override` of it: nothing of the Container a Module's `build` was handed
+ * was dropped.
+ */
+export function derivesFrom(derived: Providers, base: Providers): boolean {
+	for (const [id, provider] of base) {
+		let candidate = derived.get(id);
+		while (candidate && candidate !== provider) candidate = candidate.replaces;
+		if (!candidate) return false;
+	}
+	return true;
+}
+
+/**
+ * Whether every Provider of `derived` that is not one of `base`'s own was
+ * made after `mark`: added, or overridden, during the `build` that `mark`
+ * precedes, and not kept from an earlier one.
+ */
+export function addedSince(
+	derived: Providers,
+	base: Providers,
+	mark: number,
+): boolean {
+	for (const [id, provider] of derived) {
+		if (base.get(id) !== provider && provider.born <= mark) return false;
+	}
+	return true;
 }
 
 /** The Providers of one Container, by Token id. Never mutated once built. */

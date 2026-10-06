@@ -83,7 +83,7 @@ function create(
 	};
 	const run = (async () => {
 		const value = await provider.factory(resolver);
-		owner.created.push({ provider, value });
+		if (provider.owned) owner.created.push({ provider, value });
 		if (owner.disposal) throw disposed(owner, provider.token.name);
 		return value;
 	})();
