@@ -5,7 +5,8 @@ for. Runtime errors carry a stable `code`, so match on the `code` or the class,
 never on the message. Each `DiError` also carries `token`, the name of the
 Token it is about: a `string` on every class, except `ContainerDisposedError`,
 where it is `string | undefined` (`undefined` when `createScope` or `init`
-was called), and `ModuleEscapedError`, where it is `undefined`.
+was called), and `ModuleEscapedError`, where it is `undefined`, as on
+`@nxgt/di-hono`'s `ScopeNotMountedError`.
 
 ## Compile errors
 
