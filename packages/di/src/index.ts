@@ -11,7 +11,7 @@ export {
 	ScopeRequiredError,
 	TokenNotProvidedError,
 } from './errors/errors';
-export type { Factory, Reach, Resolver } from './lifetime/captive';
+export type { Factory, Resolver } from './lifetime/captive';
 export type { Bound, Lifetime, ProvideOptions } from './lifetime/lifetime';
 export type { Scope } from './scope/types';
 export {

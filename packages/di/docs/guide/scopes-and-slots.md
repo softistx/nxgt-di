@@ -70,8 +70,9 @@ A Scope is `AsyncDisposable`, like the Container:
 - **Disposing the Container does not dispose its live Scopes.** Whoever
   created a Scope disposes of it, usually in a `finally`, or with
   `await using`. Once the Container is disposed, a Scope's resolve of a
-  singleton rejects with `ContainerDisposedError`, so stop taking requests
-  first, then dispose of the Container.
+  singleton rejects with `ContainerDisposedError`, and so does a new
+  `createScope` (it throws), so stop taking requests first, then dispose of
+  the Container.
 
 ```ts
 const scope = app.createScope({ principal });

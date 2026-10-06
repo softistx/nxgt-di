@@ -2,41 +2,68 @@ import type { IsUnion, LiteralName } from '../token/name';
 import type { AnyToken, Token, TokenValue } from '../token/token';
 
 /**
- * Who is resolving, which decides what is visible:
- * - `scoped`: a Scope, a scoped factory, or a transient bound to scoped. It
- *   sees everything.
- * - `singleton`: a singleton factory, or a transient bound to singleton. A
- *   scoped value would be a Captive dependency, so it sees singletons only.
+ * Who is resolving, for `Resolvable`:
+ * - `scoped`: a Scope, or a factory's `get`. It sees both maps; in a
+ *   singleton's `get`, the scoped entries are `Captured`, and refused.
  * - `container`: the Container itself, which has no Scope to make a scoped
  *   value in, so it resolves singletons only.
  */
-export type Reach = 'scoped' | 'singleton' | 'container';
+export type Reach = 'scoped' | 'container';
+
+/** Brands a scoped entry a singleton's factory must not resolve. */
+declare const captured: unique symbol;
+
+/**
+ * A scoped entry as a singleton's factory (or a transient bound to
+ * singleton) sees it: present, so the refusal can name the Captive
+ * dependency, and branded, so it is never mistaken for the value.
+ */
+export interface Captured<T> {
+	readonly [captured]: T;
+}
+
+/** The scoped map with every entry `Captured`. */
+export type CapturedMap<Scoped> = { [K in keyof Scoped]: Captured<Scoped[K]> };
+
+/** Carries what a Resolver sees. Type-only: no Resolver has it at runtime. */
+declare const sees: unique symbol;
 
 /**
  * What a factory is handed: `get` resolves a Token provided BEFORE the
- * Provider that factory belongs to, if its `Reach` may see it.
+ * Provider that factory belongs to. A singleton's factory, or a transient
+ * bound to singleton, is handed its scoped entries `Captured`, so asking for
+ * one is a Captive dependency and fails to compile.
  */
-export interface Resolver<
-	Singletons,
-	Scoped = Record<never, never>,
-	R extends Reach = 'scoped',
-> {
+export interface Resolver<Singletons, Scoped = Record<never, never>> {
+	/**
+	 * Type-only, absent at runtime: makes a Resolver covariant in what it
+	 * sees. One that sees more stands in for one that sees less, so a
+	 * reusable factory typed with fewer Tokens fits a bigger Container; a
+	 * factory annotated to see more than it is given (a scoped Token from a
+	 * singleton, a Token not provided yet) is refused. Without it, `get` being
+	 * a method made the comparison bivariant.
+	 */
+	readonly [sees]?: {
+		readonly singletons: Singletons;
+		readonly scoped: Scoped;
+	};
+
 	get<K extends AnyToken>(
-		token: K & Resolvable<K, Singletons, Scoped, R>,
+		token: K & Resolvable<K, Singletons, Scoped, 'scoped'>,
 	): Promise<TokenValue<K>>;
 }
 
 /** How a Provider makes its value. It may be sync or async. */
-export type Factory<Singletons, Scoped, R extends Reach, T> = (
-	resolver: Resolver<Singletons, Scoped, R>,
+export type Factory<Singletons, Scoped, T> = (
+	resolver: Resolver<Singletons, Scoped>,
 ) => T | PromiseLike<T>;
 
 /**
  * `unknown` when `K` may be resolved from `R`, else a refusal: a property
  * named after the problem, so the compiler's message says what is wrong. It
  * refuses a union of Tokens, anything not a Token with one name, a Token not
- * provided or provided with another value type, and a scoped Token where only
- * singletons are visible: the Captive dependency check.
+ * provided or provided with another value type, a `Captured` entry (the
+ * Captive dependency check), and a scoped Token from the Container.
  */
 export type Resolvable<K, Singletons, Scoped, R extends Reach> =
 	IsUnion<K> extends true
@@ -56,12 +83,12 @@ type Lookup<
 > = N extends keyof Singletons
 	? Same<N, T, Singletons[N]>
 	: N extends keyof Scoped
-		? R extends 'scoped'
-			? Same<N, T, Scoped[N]>
-			: R extends 'singleton'
-				? {
-						readonly [M in `Token '${N}' is scoped, captured by a singleton`]: never;
-					}
+		? Scoped[N] extends Captured<unknown>
+			? {
+					readonly [M in `Token '${N}' is scoped, captured by a singleton`]: never;
+				}
+			: R extends 'scoped'
+				? Same<N, T, Scoped[N]>
 				: {
 						readonly [M in `Token '${N}' is scoped: resolve it from a Scope made by createScope`]: never;
 					}

@@ -46,21 +46,31 @@ export type ProvideOptions<
 	T,
 	L extends Lifetime = Lifetime,
 	B extends Bound = Bound,
-> = {
-	/** `singleton` (the default), `scoped` or `transient`. */
-	readonly lifetime?: L | undefined;
+> = ([L] extends ['singleton']
+	? {
+			/** `singleton` (the default), `scoped` or `transient`. */
+			readonly lifetime?: L | undefined;
+		}
+	: {
+			/**
+			 * Required for any other lifetime than singleton, so the runtime,
+			 * which reads it, agrees with the types, which may have been given
+			 * `L` explicitly.
+			 */
+			readonly lifetime: L;
+		}) & {
 	/**
 	 * Disposes of the value. Without it, the value's `Symbol.asyncDispose` is
 	 * called, failing that its `Symbol.dispose`, failing that nothing.
 	 */
 	readonly dispose?: ((value: T) => void | PromiseLike<void>) | undefined;
 } & ([L] extends ['transient']
-	? {
-			/** The longest Lifetime that may capture this transient. */
-			readonly bound?: B | undefined;
-		}
-	: {
-			readonly bound?:
-				| { readonly 'bound is only allowed with lifetime transient': never }
-				| undefined;
-		});
+		? {
+				/** The longest Lifetime that may capture this transient. */
+				readonly bound?: B | undefined;
+			}
+		: {
+				readonly bound?:
+					| { readonly 'bound is only allowed with lifetime transient': never }
+					| undefined;
+			});

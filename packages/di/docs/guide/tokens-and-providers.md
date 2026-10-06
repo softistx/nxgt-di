@@ -112,9 +112,28 @@ it declares the longest Lifetime that may capture it, its `bound`:
 })
 ```
 
+`options` may be left out only for a singleton: any other lifetime must be
+passed in `options`, which is what the runtime reads, even when the type
+arguments already say it.
+
 `bound` is only allowed with `lifetime: 'transient'`. Without the bound, a
 singleton could reach a scoped value through a transient, which is the
 captive dependency again by another road.
+
+### Reusable factories
+
+A factory declared apart is typed by what it uses, and fits every Container
+that provides at least that:
+
+```ts
+import type { Factory, NoTokens } from '@nxgt/di';
+
+const audit: Factory<{ db: Db }, NoTokens, Audit> = async ({ get }) => new Audit(await get(Db));
+app.provide(AuditToken, audit);
+```
+
+The reverse is refused: a factory typed to see a scoped Token cannot be given
+to a singleton, nor one typed to see a Token provided later in the chain.
 
 ## Disposal
 

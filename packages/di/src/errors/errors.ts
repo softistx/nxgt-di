@@ -16,10 +16,13 @@ export type DiErrorCode =
 /** The base of the errors that concern one Token. */
 export abstract class DiError extends Error {
 	abstract readonly code: DiErrorCode;
-	/** The name of the Token the error is about. */
-	readonly token: string;
+	/**
+	 * The name of the Token the error is about; `undefined` only for a
+	 * `ContainerDisposedError` from `createScope`, which concerns no Token.
+	 */
+	readonly token: string | undefined;
 
-	constructor(token: string, message: string) {
+	constructor(token: string | undefined, message: string) {
 		super(message);
 		this.token = token;
 	}
@@ -54,15 +57,20 @@ export class DuplicateTokenNameError extends DiError {
 	}
 }
 
-/** A resolve on a Container whose disposal has begun. */
+/**
+ * A resolve, or a `createScope`, on a Container whose disposal has begun.
+ * `token` is the Token resolved, or `undefined` for `createScope`.
+ */
 export class ContainerDisposedError extends DiError {
 	override readonly name = 'ContainerDisposedError';
 	readonly code = 'DI_CONTAINER_DISPOSED';
 
-	constructor(token: string) {
+	constructor(token?: string) {
 		super(
 			token,
-			`Cannot resolve Token '${token}': the Container has been disposed`,
+			token === undefined
+				? 'Cannot create a Scope: the Container has been disposed'
+				: `Cannot resolve Token '${token}': the Container has been disposed`,
 		);
 	}
 }

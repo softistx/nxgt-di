@@ -122,6 +122,33 @@ capture it. Remove `bound`, or add `lifetime: 'transient'`.
 
 **Fix:** remove the key, or declare the Slot: `.slot(token<Role>()('role'))`.
 
+### `… is not assignable to parameter of type 'Factory<…>'`
+
+**When:** a factory's parameter is annotated (or the factory is declared as a
+`Factory<…>` apart) to see Tokens its Provider is not given: a scoped Token
+in a singleton's factory, where the expected type reads
+`CapturedMap<{ requestId: string }>`, or a Token provided later in the chain.
+
+**Why:** a `Resolver` that sees more stands in for one that sees less, never
+the reverse. The annotation would otherwise smuggle in a Captive dependency
+or a cycle.
+
+**Fix:** annotate with only what the factory uses, which fits any Container
+that provides at least that, or give the Provider the lifetime it needs:
+
+```ts
+const audit: Factory<{ db: Db }, NoTokens, Audit> = async ({ get }) => new Audit(await get(Db));
+app.provide(AuditToken, audit); // any Container with a singleton 'db'
+```
+
+### `Expected 3 arguments, but got 2` (in `provide`)
+
+**When:** you gave `provide` a lifetime through its type arguments
+(`provide<'out', number, 'scoped'>(…)`) but no `options`.
+
+**Fix:** pass `{ lifetime: 'scoped' }`: the runtime reads the lifetime from
+`options`, never from the types. Only a singleton may leave `options` out.
+
 ### `Property 'principal' is missing` (in `createScope`)
 
 Or `Expected 1 arguments, but got 0`.
@@ -166,6 +193,16 @@ rejects with this error.
 await server.stop();
 await app[Symbol.asyncDispose]();
 ```
+
+### `Cannot create a Scope: the Container has been disposed`
+
+`ContainerDisposedError`, code `DI_CONTAINER_DISPOSED`, with `token`
+`undefined`.
+
+**When:** `createScope` was called after the Container's disposal began,
+usually a request that arrived during shutdown.
+
+**Fix:** stop taking requests before you dispose of the Container.
 
 ### `Disposing the Container failed for 1 value(s): 'db'`
 

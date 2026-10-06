@@ -1,5 +1,5 @@
-import { MissingSlotError } from '../errors/errors';
-import type { ProvideOptions } from '../lifetime/lifetime';
+import { ContainerDisposedError, MissingSlotError } from '../errors/errors';
+import type { Lifetime } from '../lifetime/lifetime';
 import { DiScope } from '../scope/scope';
 import type { AnyToken } from '../token/token';
 import { disposeOnce } from './dispose';
@@ -24,13 +24,15 @@ class DiContainer {
 	readonly provide = (
 		token: AnyToken,
 		factory: Provider['factory'],
-		options: ProvideOptions<unknown, 'transient'> = {},
+		options: {
+			lifetime?: Lifetime | undefined;
+			dispose?: Provider['dispose'];
+		} = {},
 	): DiContainer => {
 		const provider: Provider = {
 			token,
 			factory,
 			lifetime: options.lifetime ?? 'singleton',
-			bound: (options.lifetime === 'transient' && options.bound) || 'singleton',
 			slot: false,
 			dispose: options.dispose,
 		};
@@ -45,7 +47,6 @@ class DiContainer {
 				throw new MissingSlotError([token.name]);
 			},
 			lifetime: 'scoped',
-			bound: 'singleton',
 			slot: true,
 			dispose: undefined,
 		};
@@ -54,7 +55,10 @@ class DiContainer {
 
 	readonly createScope = (
 		slots: Readonly<Record<string, unknown>> = {},
-	): DiScope => new DiScope(this.#state, slots);
+	): DiScope => {
+		if (this.#state.disposal) throw new ContainerDisposedError();
+		return new DiScope(this.#state, slots);
+	};
 
 	readonly resolve = (token: AnyToken): Promise<unknown> =>
 		resolveToken(this.#state, undefined, token);

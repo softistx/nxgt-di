@@ -1,5 +1,5 @@
 import { DuplicateTokenNameError } from '../errors/errors';
-import type { Bound, Lifetime } from '../lifetime/lifetime';
+import type { Lifetime } from '../lifetime/lifetime';
 import type { AnyToken } from '../token/token';
 
 /** A Provider as the runtime holds it, its types erased. */
@@ -9,8 +9,6 @@ export interface Provider {
 		get(token: AnyToken): Promise<unknown>;
 	}) => unknown;
 	readonly lifetime: Lifetime;
-	/** For a transient: the longest Lifetime that may capture it. */
-	readonly bound: Bound;
 	/** A Slot: no factory runs; each Scope is given the value. */
 	readonly slot: boolean;
 	readonly dispose: ((value: unknown) => unknown) | undefined;

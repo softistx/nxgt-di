@@ -113,6 +113,24 @@ describe('Scope', () => {
 		);
 	});
 
+	test('createScope on a disposed Container throws', async () => {
+		const app = counted();
+		await app[Symbol.asyncDispose]();
+		const error = (() => {
+			try {
+				app.createScope();
+			} catch (e) {
+				return e;
+			}
+			return undefined;
+		})();
+		expect(error).toBeInstanceOf(ContainerDisposedError);
+		expect((error as ContainerDisposedError).token).toBeUndefined();
+		expect((error as Error).message).toBe(
+			'Cannot create a Scope: the Container has been disposed',
+		);
+	});
+
 	test('disposing the Container leaves its live Scopes to their owners', async () => {
 		const log: string[] = [];
 		const app = counted(log);

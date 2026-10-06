@@ -1,4 +1,4 @@
-import type { Factory, Resolvable } from '../lifetime/captive';
+import type { CapturedMap, Factory, Resolvable } from '../lifetime/captive';
 import type {
 	Bound,
 	CountsAs,
@@ -73,8 +73,16 @@ export interface Container<
 		B extends Bound = 'singleton',
 	>(
 		token: Token<N, T> & Unprovided<N, Singletons, Scoped>,
-		factory: Factory<Singletons, Scoped, Sees<L, B>, NoInfer<T>>,
-		options?: ProvideOptions<NoInfer<T>, L, B>,
+		factory: Factory<
+			Singletons,
+			Sees<L, B> extends 'scoped' ? Scoped : CapturedMap<Scoped>,
+			NoInfer<T>
+		>,
+		// Optional only for a singleton: any other lifetime must be passed,
+		// for the runtime to see it, even when `L` is given explicitly.
+		...options: [L] extends ['singleton']
+			? [options?: ProvideOptions<NoInfer<T>, L, B>]
+			: [options: ProvideOptions<NoInfer<T>, L, B>]
 		// The maps are written out rather than behind an alias, so a hover
 		// shows flat objects, not nested aliases.
 	): IsLiteralName<N> extends true
