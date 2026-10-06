@@ -95,8 +95,9 @@ CI runs the same, in this order, with no service container.
 - **Imports carry no extension** (`'./token'`, never `'./token.js'`), and
   consumers resolve as a bundler does. A failure only under `nodenext` is not a
   bug.
-- **Nothing publishes yet.** Every package is `"private": true`; removing it is
-  a deliberate commit of its own (the first-release slice), never a side effect.
+- **A new package starts `"private": true`.** Removing it is a deliberate commit of
+  its own, made when the package's first release is ready, never as a side effect.
+  `@nxgt/di` went public that way for 0.1.0.
 - **The skeleton is nxgt-data's.** The shared root files are byte-for-byte
   copies; fix a drift in nxgt-data first. The `diff` loop is in the
   `nxgt-monorepo:lay-out-a-library-monorepo` skill.

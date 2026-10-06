@@ -25,7 +25,7 @@ export const data = defineModule<{ singletons: { config: AppConfig } }>()((c) =>
 );
 
 const app = container()
-  .provide(Config, () => ({ url: process.env.MONGO_URI ?? '' }))
+  .provide(Config, () => ({ url: 'mongodb://localhost/app' }))
   .use(data); // now provides 'config', 'db' and 'users'
 ```
 

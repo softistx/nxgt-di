@@ -5,7 +5,7 @@ shipped in is the only number on this page.
 
 ## Now
 
-- **@nxgt/di** — wire an application's services with typed Tokens, and a missing or captive dependency fails to compile. In progress: Tokens, the three lifetimes, Scopes, Slots, the captive check, disposal, overrides, Modules and `init` are in; the first release is next.
+_Nothing in progress._
 
 ## Next
 
@@ -21,4 +21,4 @@ _Nothing here yet._
 
 ## Shipped
 
-_Nothing has shipped yet._
+- **@nxgt/di** (0.1.0): wire an application's services with typed Tokens, so that a missing or captive dependency fails to compile. Covers singleton, scoped and transient lifetimes, Scopes and Slots, Modules, overrides, `init`, and disposal in reverse order.
