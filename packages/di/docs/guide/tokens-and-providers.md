@@ -44,7 +44,7 @@ value. The factory receives `{ get }`, and it may be sync or async:
 import { container } from '@nxgt/di';
 
 const app = container()
-  .provide(Config, () => ({ url: process.env.MONGO_URI ?? '' }))
+  .provide(Config, () => ({ url: 'mongodb://localhost/app' }))
   .provide(Db, async ({ get }) => Database.connect((await get(Config)).url));
 ```
 
@@ -59,7 +59,7 @@ const app = container()
   what is provided, such as
   `<P extends { db: Db }>(app: Container<P>) => app.resolve(Db)`, does not
   compile, because a Container is invariant in that type. Take the concrete
-  Container type (`typeof app`) instead. Modules, which are coming, are the
+  Container type (`typeof app`) instead. [Modules](modules.md) are the
   way to write code that needs only some of a Container's Tokens.
 
 ## Lifetimes
