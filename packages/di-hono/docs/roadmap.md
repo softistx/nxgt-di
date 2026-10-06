@@ -5,7 +5,7 @@ item shipped in is the only number on this page.
 
 ## Now
 
-- **@nxgt/di-hono** — one lazy Scope per Hono request, disposed when the request ends, with the dependencies a route needs handed to it as typed `c.var` values. Not yet published.
+_Nothing in progress._
 
 ## Next
 
@@ -21,4 +21,4 @@ _Nothing here yet._
 
 ## Shipped
 
-_Nothing yet._
+- **@nxgt/di-hono** (0.1.0): one lazy Scope per Hono request, disposed of when the request ends. The dependencies a route needs reach it as typed `c.var` values through `expose`.
