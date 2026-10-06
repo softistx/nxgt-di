@@ -80,6 +80,57 @@ a Token the Container lacks could hide beside one it has.
 **Fix:** branch around the call instead:
 `primary ? app.resolve(Db) : app.resolve(Replica)`.
 
+### `Token 'requestId' is scoped, captured by a singleton`
+
+**When:** a singleton's factory, or a transient's bound to singleton (the
+default), calls `get` with a scoped Token or a Slot.
+
+**Why:** the singleton outlives the Scope. It would keep the first
+request's value for every later request: a Captive dependency.
+
+**Fix:** make the dependent scoped, or a transient with `bound: 'scoped'`, or
+pass the scoped value to its methods instead of its factory. See
+[the captive check](guide/tokens-and-providers.md#the-captive-check).
+
+```ts
+.provide(Audit, async ({ get }) => new Audit(await get(RequestId)), { lifetime: 'scoped' })
+```
+
+### `Token 'requestId' is scoped: resolve it from a Scope made by createScope`
+
+**When:** you called the Container's `resolve` with a scoped Token, a Slot,
+or a transient bound to scoped.
+
+**Fix:** create a Scope and resolve it there.
+
+```ts
+await using scope = app.createScope({ principal });
+const id = await scope.resolve(RequestId);
+```
+
+### `bound is only allowed with lifetime transient`
+
+**When:** you passed `bound` to `provide` without `lifetime: 'transient'`
+(the default lifetime is singleton).
+
+**Fix:** a singleton or a scoped Provider's lifetime already says who may
+capture it. Remove `bound`, or add `lifetime: 'transient'`.
+
+### `not a Slot of this Container`
+
+**When:** you passed `createScope` a key that no `slot(...)` declared.
+
+**Fix:** remove the key, or declare the Slot: `.slot(token<Role>()('role'))`.
+
+### `Property 'principal' is missing` (in `createScope`)
+
+Or `Expected 1 arguments, but got 0`.
+
+**When:** `createScope` was not given a value for every Slot.
+
+**Fix:** pass each Slot's value, keyed by its Token's name:
+`app.createScope({ principal: user })`.
+
 ## Runtime errors
 
 ### `Token 'db' is not provided by this Container`
@@ -121,7 +172,8 @@ await app[Symbol.asyncDispose]();
 `DisposeError` (an `AggregateError`), code `DI_DISPOSE_FAILED`.
 
 **When:** one or more `dispose` functions threw. Every other value was still
-disposed.
+disposed. A Scope reports "Disposing the Scope failed ...", with the same
+`DisposeError`.
 
 **Fix:** `error.errors` holds what each `dispose` threw, and `error.tokens`
 names their Tokens, in disposal order. A second dispose call does not throw
@@ -134,6 +186,34 @@ try {
   if (error instanceof DisposeError) log.error({ tokens: error.tokens, causes: error.errors });
 }
 ```
+
+### `Cannot resolve Token 'db': the Scope has been disposed`
+
+`ScopeDisposedError`, code `DI_SCOPE_DISPOSED`.
+
+**When:** something resolves from a Scope after its `[Symbol.asyncDispose]()`
+has begun, often work the request started and did not await.
+
+**Fix:** await the request's work before the Scope's `finally` disposes of it.
+
+### `Token 'requestId' is scoped: resolve it from a Scope made by createScope` (at runtime)
+
+`ScopeRequiredError`, code `DI_SCOPE_REQUIRED`.
+
+**When:** a cast let a scoped Token reach the Container's `resolve`, or a
+singleton's `get`. The compile error of the same text is the usual form.
+
+**Fix:** remove the cast, then follow the compile error.
+
+### `createScope was not given a value for Slot 'principal'`
+
+`MissingSlotError`, code `DI_SLOT_MISSING`. `error.slots` lists every
+missing Slot.
+
+**When:** JavaScript code, or a cast, called `createScope` without a value
+for each Slot. A Slot given `undefined` counts as given.
+
+**Fix:** pass every Slot, keyed by Token name.
 
 ## Disposal never finishes
 
