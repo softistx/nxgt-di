@@ -1,6 +1,6 @@
 {
 	"name": "@nxgt/di",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Wire an application's services with typed Tokens: a missing or captive dependency fails to compile",
 	"license": "MIT",
 	"type": "module",
