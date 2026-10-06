@@ -41,7 +41,7 @@ already provided fails to compile (and, past a cast, throws
 every resolve; the Container still owns it and disposes of it, in reverse
 creation order with everything else. Errors carry a stable `code`
 (`DI_TOKEN_NOT_PROVIDED`, `DI_DUPLICATE_TOKEN_NAME`, `DI_CONTAINER_DISPOSED`,
-`DI_SCOPE_DISPOSED`, `DI_SCOPE_REQUIRED`, `DI_SLOT_MISSING`,
+`DI_SCOPE_DISPOSED`, `DI_SCOPE_REQUIRED`, `DI_SLOT_MISSING`, `DI_SLOT_OVERRIDE`,
 `DI_DISPOSE_FAILED`).
 
 ### Scopes and Slots
@@ -65,6 +65,19 @@ dependency), and so does a `createScope` missing a Slot. A transient declares
 the longest lifetime that may capture it with `bound: 'singleton' | 'scoped'`.
 A Scope disposes of what it made, never the singletons; disposing the
 Container leaves live Scopes to their owners.
+
+### Modules, overrides and boot
+
+```ts
+const data = module<{ singletons: { config: Config } }>()((c) =>
+  c.provide(Db, async ({ get }) => Database.connect((await get(Config)).url)),
+);
+const app = container().provide(Config, loadConfig).use(data); // fails to compile if Config is missing
+
+await app.init(); // every singleton now, in provide order
+
+const faked = app.override(Db, fakeDb); // a new Container; app is unchanged
+```
 
 ## Documentation
 

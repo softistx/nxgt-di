@@ -160,6 +160,42 @@ Or `Expected 1 arguments, but got 0`.
 **Fix:** pass each Slot's value, keyed by its Token's name:
 `app.createScope({ principal: user })`.
 
+### `Module needs Token 'config', which is not provided`
+
+**When:** you `use` a Module whose requirements the Container lacks.
+
+**Fix:** provide the requirement before `use`, or `use` the Module that
+provides it first. The same applies to the related messages:
+`Module needs Token 'config' with another value type` (provide it with the
+type the Module states) and `Module needs Token 'principal' as a Slot`
+(declare it with `.slot(...)`).
+
+### `Module needs Token 'config' as a singleton, but it is scoped`
+
+**When:** the Module's `singletons` requirement is met only by a scoped
+Provider, a Slot or a transient bound to scoped.
+
+**Why:** the Module's singletons may depend on it, which would capture a
+scoped value: a Captive dependency across the Module boundary.
+
+**Fix:** provide it as a singleton, or, if the Module only uses it from its
+scoped Providers, move it to the Module's `scoped` requirements.
+
+### `Module provides Token 'db', which is already provided`
+
+**When:** the Module adds a Token name the Container already has.
+
+**Fix:** a name is unique per Container, Modules included: drop one of the
+two Providers, or rename one Token.
+
+### `Token 'principal' is a Slot: pass its value to createScope instead`
+
+**When:** you called `override` with a Slot. At runtime, past a cast, it
+throws `SlotOverrideError`, code `DI_SLOT_OVERRIDE`, with the same text.
+
+**Fix:** a Slot's value already comes from outside: give the fake to
+`createScope({ principal: fake })`. See [Testing](guide/testing.md).
+
 ## Runtime errors
 
 ### `Token 'db' is not provided by this Container`
