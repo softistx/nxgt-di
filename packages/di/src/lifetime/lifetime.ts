@@ -13,16 +13,25 @@ export type Lifetime = 'singleton' | 'scoped' | 'transient';
 export type Bound = 'singleton' | 'scoped';
 
 /**
+ * The lifetime `L` stands for at runtime, where a missing or `undefined`
+ * lifetime means singleton: `undefined` alone is `singleton`, and a union
+ * holding `undefined` holds `singleton` too.
+ */
+export type Effective<L extends Lifetime | undefined> =
+	| Exclude<L, undefined>
+	| (undefined extends L ? 'singleton' : never);
+
+/**
  * What an entry counts as for the captive check: `singleton` only when it is
  * surely one (a singleton, or a transient bound to singleton), else `scoped`.
  * Not distributive, so a lifetime typed as a union counts as scoped: the side
  * on which nothing can capture it.
  */
-export type CountsAs<L extends Lifetime, B extends Bound> = [L] extends [
-	'singleton',
-]
+export type CountsAs<L extends Lifetime | undefined, B extends Bound> = [
+	Effective<L>,
+] extends ['singleton']
 	? 'singleton'
-	: [L] extends ['transient']
+	: [Effective<L>] extends ['transient']
 		? [B] extends ['singleton']
 			? 'singleton'
 			: 'scoped'
@@ -33,9 +42,11 @@ export type CountsAs<L extends Lifetime, B extends Bound> = [L] extends [
  * scoped Provider, or a transient bound to scoped), else only singletons. The
  * other conservative side of `CountsAs`.
  */
-export type Sees<L extends Lifetime, B extends Bound> = [L] extends ['scoped']
+export type Sees<L extends Lifetime | undefined, B extends Bound> = [
+	Effective<L>,
+] extends ['scoped']
 	? 'scoped'
-	: [L] extends ['transient']
+	: [Effective<L>] extends ['transient']
 		? [B] extends ['scoped']
 			? 'scoped'
 			: 'singleton'
@@ -44,27 +55,37 @@ export type Sees<L extends Lifetime, B extends Bound> = [L] extends ['scoped']
 /** The options of `provide`. */
 export type ProvideOptions<
 	T,
-	L extends Lifetime = Lifetime,
+	L extends Lifetime | undefined = Lifetime,
 	B extends Bound = Bound,
-> = ([L] extends ['singleton']
+> = ([Effective<L>] extends ['singleton']
 	? {
 			/** `singleton` (the default), `scoped` or `transient`. */
-			readonly lifetime?: L | undefined;
+			readonly lifetime?: L;
 		}
 	: {
 			/**
 			 * Required for any other lifetime than singleton, so the runtime,
 			 * which reads it, agrees with the types, which may have been given
-			 * `L` explicitly.
+			 * `L` explicitly. `L` may hold `undefined` (from a variable typed
+			 * `Lifetime | undefined`): that means singleton, and the union
+			 * counts as scoped and sees singletons only, as any union does.
 			 */
-			readonly lifetime: L;
+			// NoInfer: `L` is inferred from the branch above only. A required
+			// property, so `{ lifetime?: 'transient' }` is refused: it may be
+			// left out, which the runtime reads as singleton.
+			// `undefined` only when `L` already holds singleton: under a config
+			// without exactOptionalPropertyTypes, inference drops the
+			// `undefined` of a `Lifetime | undefined` variable.
+			readonly lifetime: NoInfer<
+				'singleton' extends Effective<L> ? L | undefined : L
+			>;
 		}) & {
 	/**
 	 * Disposes of the value. Without it, the value's `Symbol.asyncDispose` is
 	 * called, failing that its `Symbol.dispose`, failing that nothing.
 	 */
 	readonly dispose?: ((value: T) => void | PromiseLike<void>) | undefined;
-} & ([L] extends ['transient']
+} & ([Effective<L>] extends ['transient']
 		? {
 				/** The longest Lifetime that may capture this transient. */
 				readonly bound?: B | undefined;

@@ -1,6 +1,7 @@
 import {
 	type Container,
 	container,
+	type Lifetime,
 	type NoTokens,
 	token,
 } from '../../src/index';
@@ -128,3 +129,30 @@ base.provide(
 );
 // probe: a Scope resolves it.
 unsure.createScope().resolve(Database);
+
+// An `undefined` lifetime means singleton, as at runtime.
+const undefinedLifetime = base.provide(Database, () => db, {
+	lifetime: undefined,
+});
+export type UndefinedIsSingleton = Expect<
+	Equal<
+		typeof undefinedLifetime,
+		Container<{ config: Config; db: Db }, { requestId: string }, NoTokens>
+	>
+>;
+// A `Lifetime | undefined` variable compiles, and counts as scoped, like any
+// union of lifetimes.
+declare const maybeLifetime: Lifetime | undefined;
+const maybe = base.provide(Database, () => db, { lifetime: maybeLifetime });
+// @ts-expect-error 'db' might be scoped, so the Container does not resolve it
+maybe.resolve(Database);
+// probe: a Scope does.
+maybe.createScope().resolve(Database);
+// But options whose lifetime may be left out cannot say 'transient': the
+// runtime would read singleton.
+declare const loose: { lifetime?: 'transient' };
+// @ts-expect-error lifetime is required for a transient
+base.provide(Database, () => db, loose);
+// probe: a required 'transient' compiles.
+declare const firm: { lifetime: 'transient' };
+base.provide(Database, () => db, firm);

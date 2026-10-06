@@ -34,6 +34,7 @@ export abstract class DiError extends Error {
  */
 export class TokenNotProvidedError extends DiError {
 	override readonly name = 'TokenNotProvidedError';
+	declare readonly token: string;
 	readonly code = 'DI_TOKEN_NOT_PROVIDED';
 
 	constructor(token: string) {
@@ -47,6 +48,7 @@ export class TokenNotProvidedError extends DiError {
  */
 export class DuplicateTokenNameError extends DiError {
 	override readonly name = 'DuplicateTokenNameError';
+	declare readonly token: string;
 	readonly code = 'DI_DUPLICATE_TOKEN_NAME';
 
 	constructor(token: string) {
@@ -78,6 +80,7 @@ export class ContainerDisposedError extends DiError {
 /** A resolve on a Scope whose disposal has begun. */
 export class ScopeDisposedError extends DiError {
 	override readonly name = 'ScopeDisposedError';
+	declare readonly token: string;
 	readonly code = 'DI_SCOPE_DISPOSED';
 
 	constructor(token: string) {
@@ -94,6 +97,7 @@ export class ScopeDisposedError extends DiError {
  */
 export class ScopeRequiredError extends DiError {
 	override readonly name = 'ScopeRequiredError';
+	declare readonly token: string;
 	readonly code = 'DI_SCOPE_REQUIRED';
 
 	constructor(token: string) {
@@ -111,6 +115,7 @@ export class ScopeRequiredError extends DiError {
  */
 export class MissingSlotError extends DiError {
 	override readonly name = 'MissingSlotError';
+	declare readonly token: string;
 	readonly code = 'DI_SLOT_MISSING';
 	readonly slots: readonly string[];
 

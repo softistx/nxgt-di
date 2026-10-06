@@ -2,6 +2,7 @@ import type { CapturedMap, Factory, Resolvable } from '../lifetime/captive';
 import type {
 	Bound,
 	CountsAs,
+	Effective,
 	Lifetime,
 	ProvideOptions,
 	Sees,
@@ -69,7 +70,7 @@ export interface Container<
 	provide<
 		N extends string,
 		T,
-		L extends Lifetime = 'singleton',
+		L extends Lifetime | undefined = 'singleton',
 		B extends Bound = 'singleton',
 	>(
 		token: Token<N, T> & Unprovided<N, Singletons, Scoped>,
@@ -80,7 +81,7 @@ export interface Container<
 		>,
 		// Optional only for a singleton: any other lifetime must be passed,
 		// for the runtime to see it, even when `L` is given explicitly.
-		...options: [L] extends ['singleton']
+		...options: [Effective<L>] extends ['singleton']
 			? [options?: ProvideOptions<NoInfer<T>, L, B>]
 			: [options: ProvideOptions<NoInfer<T>, L, B>]
 		// The maps are written out rather than behind an alias, so a hover

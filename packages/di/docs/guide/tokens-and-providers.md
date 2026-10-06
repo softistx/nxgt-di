@@ -114,7 +114,9 @@ it declares the longest Lifetime that may capture it, its `bound`:
 
 `options` may be left out only for a singleton: any other lifetime must be
 passed in `options`, which is what the runtime reads, even when the type
-arguments already say it.
+arguments already say it. A missing or `undefined` `lifetime` means singleton.
+A lifetime held in a variable typed `Lifetime | undefined` is accepted, and
+counts as scoped, like any lifetime the types cannot pin down.
 
 `bound` is only allowed with `lifetime: 'transient'`. Without the bound, a
 singleton could reach a scoped value through a transient, which is the

@@ -2,7 +2,9 @@
 
 One entry for each error you can hit, headed by the message you will search
 for. Runtime errors carry a stable `code`, so match on the `code` or the class,
-never on the message.
+never on the message. Each `DiError` also carries `token`, the name of the
+Token it is about: a `string` on every class, except `ContainerDisposedError`,
+where it is `string | undefined` (`undefined` when `createScope` was called).
 
 ## Compile errors
 
@@ -196,8 +198,9 @@ await app[Symbol.asyncDispose]();
 
 ### `Cannot create a Scope: the Container has been disposed`
 
-`ContainerDisposedError`, code `DI_CONTAINER_DISPOSED`, with `token`
-`undefined`.
+`ContainerDisposedError`, code `DI_CONTAINER_DISPOSED`. Its `token` is
+`undefined`, since no Token was being resolved; that is why
+`ContainerDisposedError['token']` is typed `string | undefined`.
 
 **When:** `createScope` was called after the Container's disposal began,
 usually a request that arrived during shutdown.

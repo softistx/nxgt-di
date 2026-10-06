@@ -65,3 +65,26 @@ base.provide(
 );
 // @ts-expect-error but not one that needs a Token this Container lacks
 container().provide(Length, narrow);
+
+// A scoped Token whose value type is `never` is still a scoped Token: a
+// Scope resolves it, and a singleton's factory is refused it as captive.
+const Unreachable = token<never>()('unreachable');
+const withNever = container().provide(
+	Unreachable,
+	() => {
+		throw new Error('never made');
+	},
+	{ lifetime: 'scoped' },
+);
+// probe: a Scope resolves it, and a scoped factory may get it.
+withNever.createScope().resolve(Unreachable);
+withNever.provide(Length, async ({ get }) => get(Unreachable), {
+	lifetime: 'scoped',
+});
+withNever.provide(
+	Length,
+	// @ts-expect-error Token 'unreachable' is scoped, captured by a singleton
+	async ({ get }) => get(Unreachable),
+);
+// @ts-expect-error Token 'unreachable' is scoped: resolve it from a Scope made by createScope
+withNever.resolve(Unreachable);

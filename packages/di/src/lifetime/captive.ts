@@ -83,15 +83,23 @@ type Lookup<
 > = N extends keyof Singletons
 	? Same<N, T, Singletons[N]>
 	: N extends keyof Scoped
-		? Scoped[N] extends Captured<unknown>
-			? {
-					readonly [M in `Token '${N}' is scoped, captured by a singleton`]: never;
-				}
-			: R extends 'scoped'
+		? // `never` extends everything, Captured included: a scoped `never`
+			// entry is a plain value, not a captured one.
+			[Scoped[N]] extends [never]
+			? R extends 'scoped'
 				? Same<N, T, Scoped[N]>
 				: {
 						readonly [M in `Token '${N}' is scoped: resolve it from a Scope made by createScope`]: never;
 					}
+			: Scoped[N] extends Captured<unknown>
+				? {
+						readonly [M in `Token '${N}' is scoped, captured by a singleton`]: never;
+					}
+				: R extends 'scoped'
+					? Same<N, T, Scoped[N]>
+					: {
+							readonly [M in `Token '${N}' is scoped: resolve it from a Scope made by createScope`]: never;
+						}
 		: { readonly [M in `Token '${N}' is not provided`]: never };
 
 /** Both ways, since a Token's value type is invariant. */
