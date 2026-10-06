@@ -12,8 +12,9 @@ the layering, the green bar, and the traps already paid for.
 ## Skills
 
 The skills come from the `nxgt-core` marketplace, enabled in the committed
-`.claude/settings.json`: `nxgt-workflow`, `nxgt-package`, `nxgt-docs`,
-`nxgt-review` and `nxgt-autonomy`. They are authored in `softistx/nxgt-core`,
+`.claude/settings.json`: `nxgt-base`, a bundle that brings `nxgt-monorepo`,
+`nxgt-docs`, `nxgt-review`, `nxgt-autonomy` and `nxgt-economy`; plus
+`nxgt-workflow` and `nxgt-package`. They are authored in `softistx/nxgt-core`,
 under `plugins/`; nothing is copied here.
 
 A skill that is genuinely only about this repository goes in
