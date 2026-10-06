@@ -14,7 +14,7 @@
     },
     "packages/di": {
       "name": "@nxgt/di",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "devDependencies": {
         "@types/bun": "^1.4.0",
       },
@@ -24,7 +24,7 @@
     },
     "packages/di-hono": {
       "name": "@nxgt/di-hono",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "hono": "4.13.8",
