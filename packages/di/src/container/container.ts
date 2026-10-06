@@ -89,7 +89,11 @@ class DiContainer {
 		// and adds only Providers made during the call: not a Container of its
 		// own, nor one kept from an earlier call, even on a sibling of `this`.
 		if (
-			!(built instanceof DiContainer) ||
+			// A brand check, not `instanceof`: an `Object.create(prototype)`
+			// fake passes `instanceof`, then fails on the private fields.
+			typeof built !== 'object' ||
+			built === null ||
+			!(#born in built) ||
 			(built !== this && built.#born <= mark) ||
 			!derivesFrom(built.#state.providers, this.#state.providers) ||
 			!addedSince(built.#state.providers, this.#state.providers, mark)
