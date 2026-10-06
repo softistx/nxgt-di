@@ -1,9 +1,12 @@
+import { MissingSlotError } from '../errors/errors';
+import type { ProvideOptions } from '../lifetime/lifetime';
+import { DiScope } from '../scope/scope';
 import type { AnyToken } from '../token/token';
 import { disposeOnce } from './dispose';
 import { addProvider, type Provider, type Providers } from './provide';
 import { resolveToken } from './resolve';
 import { createState, type State } from './state';
-import type { Container, NoTokens, ProvideOptions } from './types';
+import type { Container, NoTokens } from './types';
 
 /**
  * The runtime behind every Container. Its types are erased: `Container<P>`
@@ -21,19 +24,40 @@ class DiContainer {
 	readonly provide = (
 		token: AnyToken,
 		factory: Provider['factory'],
-		options: ProvideOptions<unknown> = {},
+		options: ProvideOptions<unknown, 'transient'> = {},
 	): DiContainer => {
 		const provider: Provider = {
 			token,
 			factory,
 			lifetime: options.lifetime ?? 'singleton',
+			bound: (options.lifetime === 'transient' && options.bound) || 'singleton',
+			slot: false,
 			dispose: options.dispose,
 		};
 		return new DiContainer(addProvider(this.#state.providers, provider));
 	};
 
+	readonly slot = (token: AnyToken): DiContainer => {
+		const provider: Provider = {
+			token,
+			// Never run: a Scope is given every Slot's value when it is made.
+			factory: () => {
+				throw new MissingSlotError([token.name]);
+			},
+			lifetime: 'scoped',
+			bound: 'singleton',
+			slot: true,
+			dispose: undefined,
+		};
+		return new DiContainer(addProvider(this.#state.providers, provider));
+	};
+
+	readonly createScope = (
+		slots: Readonly<Record<string, unknown>> = {},
+	): DiScope => new DiScope(this.#state, slots);
+
 	readonly resolve = (token: AnyToken): Promise<unknown> =>
-		resolveToken(this.#state, token);
+		resolveToken(this.#state, undefined, token);
 
 	readonly [Symbol.asyncDispose] = (): Promise<void> =>
 		disposeOnce(this.#state);

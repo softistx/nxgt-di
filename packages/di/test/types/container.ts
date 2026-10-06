@@ -1,4 +1,9 @@
-import { type Container, container, token } from '../../src/index';
+import {
+	type Container,
+	container,
+	type NoTokens,
+	token,
+} from '../../src/index';
 import type { Config, Db } from './fixtures';
 
 const Database = token<Db>()('db');
@@ -46,3 +51,28 @@ viaAny.resolve(Database);
 container()
 	.provide(Database, () => db)
 	.resolve(Database);
+
+// Two Containers that differ only in a lifetime are not interchangeable: a
+// scoped 'db' is no singleton 'db', either way round.
+const scopedDb = container().provide(Database, () => db, {
+	lifetime: 'scoped',
+});
+// @ts-expect-error 'db' is scoped here, not a singleton
+export const asSingleton: Container<{ db: Db }> = scopedDb;
+// @ts-expect-error 'db' is a singleton here, not scoped
+export const asScoped: Container<NoTokens, { db: Db }> = container().provide(
+	Database,
+	() => db,
+);
+// probe: the matching maps compile.
+export const scopedOk: Container<NoTokens, { db: Db }> = scopedDb;
+
+// Nor do two that differ only in Slots: a Slot is not a scoped Provider.
+const slotDb = container().slot(Database);
+// @ts-expect-error 'db' is a Slot here, which createScope must be given
+export const slotAsScoped: Container<NoTokens, { db: Db }> = slotDb;
+// @ts-expect-error 'db' is a scoped Provider here, not a Slot
+export const scopedAsSlot: Container<NoTokens, { db: Db }, { db: Db }> =
+	scopedDb;
+// probe: the matching maps compile.
+export const slotOk: Container<NoTokens, { db: Db }, { db: Db }> = slotDb;

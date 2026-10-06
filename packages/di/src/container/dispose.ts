@@ -1,5 +1,5 @@
 import { DisposeError } from '../errors/errors';
-import type { Created, State } from './state';
+import type { Created, Owner } from './state';
 
 /**
  * How one created value is disposed of: the Provider's `dispose` if it names
@@ -22,12 +22,12 @@ export function disposerOf({
 }
 
 /**
- * Disposes of a Container: waits for the factories still running, then
+ * Disposes of a Container or a Scope: waits for the factories still running, then
  * disposes of every created value in reverse creation order, transients
  * included. One failing dispose does not stop the others; once all have run,
  * the failures are thrown together as a `DisposeError`.
  */
-export async function disposeAll(state: State): Promise<void> {
+export async function disposeAll(state: Owner): Promise<void> {
 	await Promise.allSettled(state.pending);
 	const errors: unknown[] = [];
 	const tokens: string[] = [];
@@ -44,16 +44,16 @@ export async function disposeAll(state: State): Promise<void> {
 		}
 	}
 	state.created.length = 0;
-	state.singletons.clear();
-	if (errors.length > 0) throw new DisposeError(errors, tokens);
+	state.cache.clear();
+	if (errors.length > 0) throw new DisposeError(errors, tokens, state.kind);
 }
 
 /**
- * The Container's `[Symbol.asyncDispose]`. The first call disposes; any later
+ * A Container's or a Scope's `[Symbol.asyncDispose]`. The first call disposes; any later
  * call waits for that disposal and resolves, without rethrowing what the
  * first call already reported.
  */
-export function disposeOnce(state: State): Promise<void> {
+export function disposeOnce(state: Owner): Promise<void> {
 	if (state.disposal) return state.disposal.then(noop, noop);
 	// Assigned before the first await inside: a value whose factory settles
 	// from here on sees disposal has begun.

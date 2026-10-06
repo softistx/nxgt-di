@@ -8,6 +8,9 @@ export type DiErrorCode =
 	| 'DI_TOKEN_NOT_PROVIDED'
 	| 'DI_DUPLICATE_TOKEN_NAME'
 	| 'DI_CONTAINER_DISPOSED'
+	| 'DI_SCOPE_DISPOSED'
+	| 'DI_SCOPE_REQUIRED'
+	| 'DI_SLOT_MISSING'
 	| 'DI_DISPOSE_FAILED';
 
 /** The base of the errors that concern one Token. */
@@ -64,6 +67,54 @@ export class ContainerDisposedError extends DiError {
 	}
 }
 
+/** A resolve on a Scope whose disposal has begun. */
+export class ScopeDisposedError extends DiError {
+	override readonly name = 'ScopeDisposedError';
+	readonly code = 'DI_SCOPE_DISPOSED';
+
+	constructor(token: string) {
+		super(
+			token,
+			`Cannot resolve Token '${token}': the Scope has been disposed`,
+		);
+	}
+}
+
+/**
+ * A scoped Token resolved where there is no Scope: from the Container, or from
+ * a singleton's factory. The types prevent it; it is reached through a cast.
+ */
+export class ScopeRequiredError extends DiError {
+	override readonly name = 'ScopeRequiredError';
+	readonly code = 'DI_SCOPE_REQUIRED';
+
+	constructor(token: string) {
+		super(
+			token,
+			`Token '${token}' is scoped: resolve it from a Scope made by createScope`,
+		);
+	}
+}
+
+/**
+ * `createScope` was not given a value for every Slot. The types prevent it;
+ * it is reached from JavaScript, or through a cast. `token` is the first
+ * missing Slot, `slots` all of them.
+ */
+export class MissingSlotError extends DiError {
+	override readonly name = 'MissingSlotError';
+	readonly code = 'DI_SLOT_MISSING';
+	readonly slots: readonly string[];
+
+	constructor(slots: readonly [string, ...string[]]) {
+		super(
+			slots[0],
+			`createScope was not given a value for Slot ${slots.map((s) => `'${s}'`).join(', ')}`,
+		);
+		this.slots = slots;
+	}
+}
+
 /**
  * One or more values failed to dispose. Every other value was still disposed;
  * `errors` holds what each failing dispose threw, and `tokens` the names of
@@ -74,10 +125,14 @@ export class DisposeError extends AggregateError {
 	readonly code = 'DI_DISPOSE_FAILED';
 	readonly tokens: readonly string[];
 
-	constructor(errors: readonly unknown[], tokens: readonly string[]) {
+	constructor(
+		errors: readonly unknown[],
+		tokens: readonly string[],
+		owner: 'Container' | 'Scope' = 'Container',
+	) {
 		super(
 			errors,
-			`Disposing the Container failed for ${tokens.length} value(s): ${tokens.map((t) => `'${t}'`).join(', ')}`,
+			`Disposing the ${owner} failed for ${tokens.length} value(s): ${tokens.map((t) => `'${t}'`).join(', ')}`,
 		);
 		this.tokens = tokens;
 	}

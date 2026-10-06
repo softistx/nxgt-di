@@ -113,10 +113,11 @@ container().provide(Database, () => db, {
 	},
 });
 
-// `scoped` arrives with Scopes; until then a Provider is refused it.
+// A lifetime is one of the three.
 container().provide(Database, () => db, {
-	// @ts-expect-error 'scoped' is not a Lifetime yet
-	lifetime: 'scoped',
+	// @ts-expect-error 'request' is not a Lifetime
+	lifetime: 'request',
 });
-// probe: 'transient' is.
+// probe: 'scoped' and 'transient' are.
+container().provide(Database, () => db, { lifetime: 'scoped' });
 container().provide(Database, () => db, { lifetime: 'transient' });
