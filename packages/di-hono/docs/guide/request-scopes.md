@@ -31,6 +31,12 @@ Mount `deps` once, with `app.use`, before every route that uses it. Mounting it
 a second time on the same request does nothing: the outer one keeps the Scope
 and disposes of it.
 
+Two `di` of different Containers can be nested, the inner one mounted on a
+narrower path. Inside it, `c.var.scope` is the inner Scope; once the inner
+middleware has disposed of it, `c.var.scope` is the outer Scope again, so an
+outer middleware's code after its `await next()` resolves from its own Scope.
+Each `expose` always uses the Scope of the `di` it came from.
+
 `c.var.scope` is a Scope of `@nxgt/di`: `resolve` takes any Token the Container
 provides, singletons included, and always returns a Promise. Its `resolve` is
 bound, so `const { resolve } = c.var.scope` works.

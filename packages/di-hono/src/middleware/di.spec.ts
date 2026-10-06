@@ -191,4 +191,28 @@ describe('di', () => {
 		expect(slots).toHaveBeenCalledTimes(1);
 		expect(events).toEqual(['created', 'disposed']);
 	});
+
+	test('nested under another di, gives the outer Scope back once the inner one is disposed', async () => {
+		const outer = setup();
+		const inner = di(
+			container().provide(Tenant, () => 'inner', { lifetime: 'scoped' }),
+		);
+		let after: unknown;
+		const app = new Hono()
+			.use(outer.deps)
+			.use(async (c, next) => {
+				await next();
+				// Past the inner middleware, which has disposed of its own Scope.
+				after = await c.var.scope.resolve(Greeting).catch((e: Error) => e);
+			})
+			.use(inner)
+			.get('/', async (c) => {
+				await c.var.scope.resolve(Tenant);
+				return c.text('ok');
+			});
+
+		await app.request('/');
+
+		expect(after).toBe('hello public');
+	});
 });

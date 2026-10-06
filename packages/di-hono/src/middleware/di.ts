@@ -57,10 +57,20 @@ export function di<Singletons, Scoped, Slots>(
 		// Through a plain Env: an application that augments Hono's
 		// `ContextVariableMap` with its own `scope` type must not make this
 		// line fail to compile against the source.
-		(c as Context<{ Variables: { scope: unknown } }>).set('scope', scope);
+		const vars = c as Context<{ Variables: { scope: unknown } }>;
+		// Nested under another `di`, whose Scope this one hides until `next`
+		// returns: the outer middleware's code after its own `next` must see
+		// its Scope again, not this one, disposed of below.
+		const outer = vars.get('scope');
+		vars.set('scope', scope);
 		try {
 			await next();
 		} finally {
+			// Unless something later replaced it: that value is not ours to undo.
+			// With nothing before it, the disposed Scope stays, so a late
+			// resolve gets ScopeDisposedError rather than an undefined.
+			if (outer !== undefined && vars.get('scope') === scope)
+				vars.set('scope', outer);
 			// After `next`, so a streamed body that is still being written may
 			// not use the Scope's values: see the guide.
 			await scope[Symbol.asyncDispose]().catch((error: unknown) => {
