@@ -41,7 +41,30 @@ already provided fails to compile (and, past a cast, throws
 every resolve; the Container still owns it and disposes of it, in reverse
 creation order with everything else. Errors carry a stable `code`
 (`DI_TOKEN_NOT_PROVIDED`, `DI_DUPLICATE_TOKEN_NAME`, `DI_CONTAINER_DISPOSED`,
+`DI_SCOPE_DISPOSED`, `DI_SCOPE_REQUIRED`, `DI_SLOT_MISSING`,
 `DI_DISPOSE_FAILED`).
+
+### Scopes and Slots
+
+```ts
+const Principal = token<User>()('principal');
+const Audit = token<AuditLog>()('audit');
+
+const web = app
+  .slot(Principal) // a value each Scope is given
+  .provide(Audit, async ({ get }) => new AuditLog(await get(Db), await get(Principal)), {
+    lifetime: 'scoped', // once per Scope
+  });
+
+await using scope = web.createScope({ principal: user }); // every Slot, by name
+const audit = await scope.resolve(Audit);
+```
+
+A singleton that depends on a scoped value fails to compile (a Captive
+dependency), and so does a `createScope` missing a Slot. A transient declares
+the longest lifetime that may capture it with `bound: 'singleton' | 'scoped'`.
+A Scope disposes of what it made, never the singletons; disposing the
+Container leaves live Scopes to their owners.
 
 ## Documentation
 

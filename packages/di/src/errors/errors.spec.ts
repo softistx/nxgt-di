@@ -4,6 +4,9 @@ import {
 	DiError,
 	DisposeError,
 	DuplicateTokenNameError,
+	MissingSlotError,
+	ScopeDisposedError,
+	ScopeRequiredError,
 	TokenNotProvidedError,
 } from './errors';
 
@@ -12,6 +15,9 @@ describe('errors', () => {
 		[new TokenNotProvidedError('db'), 'DI_TOKEN_NOT_PROVIDED'],
 		[new DuplicateTokenNameError('db'), 'DI_DUPLICATE_TOKEN_NAME'],
 		[new ContainerDisposedError('db'), 'DI_CONTAINER_DISPOSED'],
+		[new ScopeDisposedError('db'), 'DI_SCOPE_DISPOSED'],
+		[new ScopeRequiredError('db'), 'DI_SCOPE_REQUIRED'],
+		[new MissingSlotError(['db', 'tenant']), 'DI_SLOT_MISSING'],
 	] as const)('%p has a stable code and names its Token', (error, code) => {
 		expect(error).toBeInstanceOf(DiError);
 		expect(error).toBeInstanceOf(Error);

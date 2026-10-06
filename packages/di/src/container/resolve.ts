@@ -1,49 +1,100 @@
 import {
 	ContainerDisposedError,
+	ScopeDisposedError,
+	ScopeRequiredError,
 	TokenNotProvidedError,
 } from '../errors/errors';
 import type { AnyToken } from '../token/token';
 import type { Provider } from './provide';
-import type { State } from './state';
+import type { Owner, ScopeState, State } from './state';
 
 /**
- * Resolves `token` in a Container. A singleton is created once and its
- * promise cached, so concurrent resolves share it; a factory that fails is
- * dropped from the cache, so the next resolve tries again. A transient is
- * created on every call. Either way, the Container owns what it creates.
+ * Resolves `token` for a Container, or for one of its Scopes when `scope` is
+ * given. Without a Scope (the Container's own `resolve`, a singleton's
+ * factory) a scoped Token is refused.
+ *
+ * - A singleton is made in the Container, with no Scope, whoever asks for it,
+ *   so it cannot capture a scoped value, and the Container owns it.
+ * - A scoped value is made once per Scope, which owns it. A Slot's value is
+ *   already in the Scope's cache.
+ * - A transient is made on every call, and owned by whoever resolved it: the
+ *   Scope if there is one, else the Container.
+ *
+ * A cached promise is shared by concurrent resolves, and dropped when the
+ * factory fails, so the next resolve tries again.
  */
-export function resolveToken(state: State, token: AnyToken): Promise<unknown> {
-	if (state.disposal)
-		return Promise.reject(new ContainerDisposedError(token.name));
-	const provider = state.providers.get(token.id);
+export function resolveToken(
+	container: State,
+	scope: ScopeState | undefined,
+	token: AnyToken,
+): Promise<unknown> {
+	const owner: Owner = scope ?? container;
+	if (owner.disposal) return Promise.reject(disposed(owner, token.name));
+	const provider = container.providers.get(token.id);
 	if (!provider) return Promise.reject(new TokenNotProvidedError(token.name));
-	if (provider.lifetime === 'transient') return create(state, provider);
 
-	const cached = state.singletons.get(token.id);
-	if (cached) return cached;
-	const created = create(state, provider);
-	state.singletons.set(token.id, created);
-	// Registered before any caller can await `created`, so the failed entry
-	// is gone before anyone could resolve again: nothing newer to protect.
-	created.catch(() => state.singletons.delete(token.id));
-	return created;
+	switch (provider.lifetime) {
+		case 'singleton':
+			if (container.disposal)
+				return Promise.reject(new ContainerDisposedError(token.name));
+			return cached(container, provider, () =>
+				create(container, container, undefined, provider),
+			);
+		case 'scoped':
+			if (!scope) return Promise.reject(new ScopeRequiredError(token.name));
+			return cached(scope, provider, () =>
+				create(container, scope, scope, provider),
+			);
+		case 'transient':
+			return create(container, owner, scope, provider);
+	}
+}
+
+function cached(
+	owner: Owner,
+	provider: Provider,
+	make: () => Promise<unknown>,
+): Promise<unknown> {
+	const id = provider.token.id;
+	const hit = owner.cache.get(id);
+	if (hit) return hit;
+	const made = make();
+	owner.cache.set(id, made);
+	// Registered before any caller can await `made`, so the failed entry is
+	// gone before anyone could resolve again: nothing newer to protect.
+	made.catch(() => owner.cache.delete(id));
+	return made;
 }
 
 /**
- * Runs `provider`'s factory and records the value as created. A value that
- * arrives once disposal has begun is still recorded, so it is disposed of,
- * but whoever asked for it gets a rejection instead.
+ * Runs `provider`'s factory, its `get` reaching as far as `scope`, and
+ * records the value in `owner`. A value that arrives once the owner's
+ * disposal has begun is still recorded, so it is disposed of, but whoever
+ * asked for it gets a rejection instead.
  */
-function create(state: State, provider: Provider): Promise<unknown> {
-	const resolver = { get: (token: AnyToken) => resolveToken(state, token) };
+function create(
+	container: State,
+	owner: Owner,
+	scope: ScopeState | undefined,
+	provider: Provider,
+): Promise<unknown> {
+	const resolver = {
+		get: (token: AnyToken) => resolveToken(container, scope, token),
+	};
 	const run = (async () => {
 		const value = await provider.factory(resolver);
-		state.created.push({ provider, value });
-		if (state.disposal) throw new ContainerDisposedError(provider.token.name);
+		owner.created.push({ provider, value });
+		if (owner.disposal) throw disposed(owner, provider.token.name);
 		return value;
 	})();
-	state.pending.add(run);
-	const settle = () => state.pending.delete(run);
+	owner.pending.add(run);
+	const settle = () => owner.pending.delete(run);
 	run.then(settle, settle);
 	return run;
+}
+
+function disposed(owner: Owner, token: string): Error {
+	return owner.kind === 'Scope'
+		? new ScopeDisposedError(token)
+		: new ContainerDisposedError(token);
 }

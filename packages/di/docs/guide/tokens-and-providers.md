@@ -67,6 +67,7 @@ const app = container()
 | `lifetime` | what you get |
 | --- | --- |
 | `'singleton'` (default) | one value per Container, made on first resolve |
+| `'scoped'` | one value per Scope (see [Scopes and Slots](scopes-and-slots.md)) |
 | `'transient'` | a new value on every resolve |
 
 ```ts
@@ -74,7 +75,71 @@ const app = container()
 ```
 
 Two concurrent resolves of a singleton share one creation. If the factory
-throws, nothing is cached, and the next resolve tries again.
+throws, nothing is cached, and the next resolve tries again. The same holds
+for a scoped value within its Scope.
+
+### The captive check
+
+A singleton lives as long as the Container, so it must not hold on to a
+scoped value, which belongs to one request. That is a **Captive dependency**,
+and it fails to compile: a singleton factory's `get` does not see scoped
+Tokens.
+
+```ts
+container()
+  .provide(RequestId, () => crypto.randomUUID(), { lifetime: 'scoped' })
+  .provide(Audit, async ({ get }) => new Audit(await get(RequestId)));
+  // ^ Token 'requestId' is scoped, captured by a singleton
+```
+
+Make `Audit` scoped, or pass the request id to its methods instead.
+
+### A transient's `bound`
+
+A transient is new on every resolve, but whoever resolves it may keep it. So
+it declares the longest Lifetime that may capture it, its `bound`:
+
+- `bound: 'singleton'` (the default): a singleton may depend on it, so its
+  own factory sees only singletons, like a singleton's. The Container itself
+  can resolve it.
+- `bound: 'scoped'`: its factory may use scoped values, and it counts as
+  scoped. A singleton cannot depend on it, and only a Scope resolves it.
+
+```ts
+.provide(Logger, async ({ get }) => base.child({ requestId: await get(RequestId) }), {
+  lifetime: 'transient',
+  bound: 'scoped',
+})
+```
+
+`options` may be left out only for a singleton: any other lifetime must be
+passed in `options`, which is what the runtime reads, even when the type
+arguments already say it. A missing or `undefined` `lifetime` means singleton.
+A lifetime held in a variable typed `Lifetime | undefined` is accepted, and
+counts as scoped, like any lifetime the types cannot pin down.
+
+`bound` is only allowed with `lifetime: 'transient'`. Without the bound, a
+singleton could reach a scoped value through a transient, which is the
+captive dependency again by another road.
+
+### Reusable factories
+
+> These checks rely on `strictFunctionTypes`, which `strict: true` turns on.
+> With it off, a factory whose parameter is annotated can claim a Token that
+> is provided further down, and the mistake only shows at runtime.
+
+A factory declared apart is typed by what it uses, and fits every Container
+that provides at least that:
+
+```ts
+import type { Factory, NoTokens } from '@nxgt/di';
+
+const audit: Factory<{ db: Db }, NoTokens, Audit> = async ({ get }) => new Audit(await get(Db));
+app.provide(AuditToken, audit);
+```
+
+The reverse is refused: a factory typed to see a scoped Token cannot be given
+to a singleton, nor one typed to see a Token provided later in the chain.
 
 ## Disposal
 
@@ -94,6 +159,9 @@ await using app = container()
 - When several `dispose` functions throw, the rest still run, and you get one
   `DisposeError` that holds every failure. See
   [troubleshooting](../troubleshooting.md).
+- Whoever resolves a transient owns it: the Container, or the Scope that
+  resolved it. A Container's disposal never touches its Scopes; see
+  [Scopes and Slots](scopes-and-slots.md#disposal).
 - A transient is disposed once per resolve. A transient factory that returns
   the same object every time gets that object disposed as many times as it
   was resolved; make such a value a singleton instead.

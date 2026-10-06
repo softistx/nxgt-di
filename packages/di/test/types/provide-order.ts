@@ -113,10 +113,27 @@ container().provide(Database, () => db, {
 	},
 });
 
-// `scoped` arrives with Scopes; until then a Provider is refused it.
+// A lifetime is one of the three.
 container().provide(Database, () => db, {
-	// @ts-expect-error 'scoped' is not a Lifetime yet
+	// @ts-expect-error 'request' is not a Lifetime
+	lifetime: 'request',
+});
+// probe: 'scoped' and 'transient' are.
+container().provide(Database, () => db, { lifetime: 'scoped' });
+container().provide(Database, () => db, { lifetime: 'transient' });
+
+// Any lifetime but singleton must be passed, even when the type arguments
+// say it: the runtime reads `options`, not the types.
+// @ts-expect-error options are required for a scoped Provider
+container().provide<'db', Db, 'scoped'>(Database, () => db);
+container().provide<'db', Db, 'scoped'>(
+	Database,
+	() => db,
+	// @ts-expect-error and they must name the lifetime
+	{ dispose: () => {} },
+);
+// probe: naming it compiles, and a singleton needs no options.
+container().provide<'db', Db, 'scoped'>(Database, () => db, {
 	lifetime: 'scoped',
 });
-// probe: 'transient' is.
-container().provide(Database, () => db, { lifetime: 'transient' });
+container().provide(Database, () => db);

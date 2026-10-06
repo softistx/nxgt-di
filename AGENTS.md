@@ -82,6 +82,12 @@ CI runs the same, in this order, with no service container.
   `exactOptionalPropertyTypes`). A conditional type that resolves under one and
   not the other is the bug this catches. Do not add the strict flags to the
   consumer config.
+- **Order and captive checks on an annotated factory need `strictFunctionTypes`.**
+  A factory whose parameter is annotated with a `Resolver` is checked through
+  function-parameter variance. Every consumer app compiles with `strict: true`,
+  and so does `test/consumer`. Under `strictFunctionTypes: false` an annotation
+  can claim a Token that is provided later. The captive refusal still holds, but
+  provide order does not. Do not remove `strict` from the consumer config.
 - **Imports carry no extension** (`'./token'`, never `'./token.js'`), and
   consumers resolve as a bundler does. A failure only under `nodenext` is not a
   bug.
