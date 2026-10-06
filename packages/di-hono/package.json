@@ -1,0 +1,60 @@
+{
+	"name": "@nxgt/di-hono",
+	"version": "0.0.0",
+	"private": true,
+	"description": "A Hono middleware for @nxgt/di: a lazy Scope per request, disposed when the request ends, and typed values on c.var",
+	"license": "MIT",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"docs",
+		"README.md",
+		"package.json",
+		"LICENSE"
+	],
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"keywords": [
+		"dependency-injection",
+		"hono",
+		"middleware",
+		"scope",
+		"typescript"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/softistx/nxgt-di.git",
+		"directory": "packages/di-hono"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public"
+	},
+	"scripts": {
+		"build": "bun run ../../build.ts",
+		"test": "bun test src",
+		"typecheck": "tsc --noEmit"
+	},
+	"nxgt": {
+		"entrypoints": [
+			"src/index.ts"
+		]
+	},
+	"devDependencies": {
+		"@types/bun": "^1.4.0",
+		"hono": "4.13.8"
+	},
+	"peerDependencies": {
+		"@nxgt/di": "workspace:^",
+		"hono": "^4.8.0",
+		"typescript": "^6.0.3"
+	}
+}
